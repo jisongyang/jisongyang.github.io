@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>寻花令 - 诗词猜谜</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --accent: #e94560;
+            --accent-light: #ff6b6b;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-muted: rgba(255, 255, 255, 0.5);
+            --correct: #6aaa64;      /* 绿色 - 正确 */
+            --present: #c9b458;      /* 黄色 - 存在 */
+            --absent: #3a3a3c;       /* 深灰 - 不存在 */
+            --empty: #5a5a5c;        /* 浅灰 - 待输入 */
+            --border: rgba(255, 255, 255, 0.2);
+        }
+
+        body {
+            font-family: 'Noto Serif SC', 'SimSun', '宋体', serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-tertiary) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* 背景装饰 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(233, 69, 96, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 154, 158, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(250, 208, 196, 0.05) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 飘落花瓣效果 */
+        .petal {
+            position: fixed;
+            width: 15px;
+            height: 15px;
+            background: radial-gradient(circle, rgba(255, 182, 193, 0.5) 0%, transparent 70%);
+            border-radius: 50% 0 50% 50%;
+            pointer-events: none;
+            animation: fall linear infinite;
+            z-index: 0;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-100px) rotate(0deg);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* 头部 */
+        .header {
+            text-align: center;
+            padding: 30px 20px 20px;
+            z-index: 1;
+            position: relative;
+        }
+
+        .title {
+            font-size: 42px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, #ffdde1 50%, #ee9ca7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 15px;
+            text-shadow: 0 0 30px rgba(233, 69, 96, 0.3);
+            position: relative;
+            display: inline-block;
+        }
+
+        .title::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            border-radius: 2px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 15px;
+            letter-spacing: 3px;
+        }
+
+        /* 游戏信息 */
+        .game-info {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            z-index: 1;
+            position: relative;
+        }
+
+        .poem-type {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(233, 69, 96, 0.2);
+            border: 1px solid rgba(233, 69, 96, 0.4);
+            border-radius: 20px;
+            font-size: 13px;
+            color: #ffdde1;
+            letter-spacing: 2px;
+        }
+
+        .guess-count {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+        }
+
+        /* 主游戏区 */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 15px 30px;
+            z-index: 1;
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* 猜词网格 */
+        .guess-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 25px;
+            width: 100%;
+            align-items: center;
+        }
+
+        .guess-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .char-box {
+            width: 40px;
+            height: 48px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            cursor: default;
+            user-select: none;
+        }
+
+        /* 输入框样式 */
+        .char-box.input-box {
+            cursor: text;
+            background: rgba(255, 255, 255, 0.08);
+            caret-color: transparent;
+        }
+
+        .char-box.input-box:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(233, 69, 96, 0.3);
+        }
+
+        /* 状态颜色 */
+        .char-box.correct {
+            background: var(--correct);
+            border-color: var(--correct);
+            color: white;
+            animation: flip 0.6s ease;
+        }
+
+        .char-box.present {
+            background: var(--present);
+            border-color: var(--present);
+            color: white;
+            animation: flip 0.6s ease;
+        }
+
+        .char-box.absent {
+            background: var(--absent);
+            border-color: var(--absent);
+            color: rgba(255, 255, 255, 0.6);
+            animation: flip 0.6s ease;
+        }
+
+        .char-box.empty {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--empty);
+        }
+
+        @keyframes flip {
+            0% { transform: rotateX(0); }
+            50% { transform: rotateX(90deg); }
+            100% { transform: rotateX(0); }
+        }
+
+        /* 按钮 */
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            font-size: 15px;
+            font-family: inherit;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 3px;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+            color: white;
+            box-shadow: 0 4px 20px rgba(233, 69, 96, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(233, 69, 96, 0.5);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        /* 提示信息 */
+        .message {
+            text-align: center;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            letter-spacing: 1px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            min-height: 40px;
+        }
+
+        .message.show {
+            opacity: 1;
+        }
+
+        .message.success {
+            background: rgba(106, 170, 100, 0.2);
+            border: 1px solid rgba(106, 170, 100, 0.4);
+            color: #a7f3a0;
+        }
+
+        .message.error {
+            background: rgba(233, 69, 96, 0.2);
+            border: 1px solid rgba(233, 69, 96, 0.4);
+            color: #ffb3ba;
+        }
+
+        /* 结果展示 */
+        .result-section {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .result-section.show {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-title {
+            font-size: 18px;
+            color: var(--accent-light);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .result-poem {
+            font-size: 22px;
+            color: white;
+            letter-spacing: 4px;
+            line-height: 1.8;
+            margin-bottom: 8px;
+        }
+
+        .result-author {
+            font-size: 14px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        /* 图例说明 */
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .legend-box {
+            width: 20px;
+            height: 24px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .legend-box.correct { background: var(--correct); }
+        .legend-box.present { background: var(--present); }
+        .legend-box.absent { background: var(--absent); }
+
+        /* 页脚 */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 12px;
+            letter-spacing: 1px;
+            z-index: 1;
+            position: relative;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 480px) {
+            .title {
+                font-size: 32px;
+                letter-spacing: 10px;
+            }
+
+            /* 默认尺寸 */
+            .char-box {
+                width: 28px;
+                height: 36px;
+                font-size: 16px;
+                border-radius: 6px;
+            }
+
+            /* 五言诗（10字）使用稍大尺寸 */
+            .guess-row.len-10 .char-box {
+                width: 32px;
+                height: 40px;
+                font-size: 18px;
+            }
+
+            /* 七言诗（14字）使用更小尺寸 */
+            .guess-row.len-14 .char-box {
+                width: 24px;
+                height: 32px;
+                font-size: 14px;
+            }
+
+            .guess-row {
+                gap: 4px;
+            }
+
+            /* 五言诗减小间距 */
+            .guess-row.len-10 {
+                gap: 5px;
+            }
+
+            /* 七言诗进一步减小间距 */
+            .guess-row.len-14 {
+                gap: 3px;
+            }
+
+            .guess-grid {
+                gap: 6px;
+            }
+
+            .btn {
+                padding: 10px 24px;
+                font-size: 14px;
+            }
+
+            .legend {
+                gap: 12px;
+            }
+
+            .legend-item {
+                font-size: 11px;
+            }
+        }
+
+        @media (min-width: 481px) and (max-width: 768px) {
+            .char-box {
+                width: 32px;
+                height: 40px;
+            }
+
+            .guess-row.len-10 .char-box {
+                width: 36px;
+                height: 44px;
+            }
+
+            .guess-row.len-14 .char-box {
+                width: 28px;
+                height: 36px;
+                font-size: 16px;
+            }
+        }
+
+        /* 成功动画 */
+        .celebration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: confetti-fall 3s ease-out forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                opacity: 1;
+                transform: translateY(0) rotate(0deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(100vh) rotate(720deg);
+            }
+        }
+
+        /* 数据加载提示 */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(233, 69, 96, 0.3);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 头部 -->
+    <header class="header">
+        <h1 class="title">寻花令</h1>
+        <p class="subtitle">猜诗词 · 品经典</p>
+    </header>
+
+    <!-- 游戏区 -->
+    <main class="game-container">
+        <!-- 游戏信息 -->
+        <div class="game-info">
+            <span class="poem-type" id="poemType">正在加载...</span>
+            <span class="guess-count" id="guessCount">已猜: 0</span>
+        </div>
+
+        <!-- 消息提示 -->
+        <div class="message" id="message"></div>
+
+        <!-- 结果展示 -->
+        <div class="result-section" id="resultSection">
+            <div class="result-title" id="resultTitle"></div>
+            <div class="result-poem" id="resultPoem"></div>
+            <div class="result-author" id="resultAuthor"></div>
+        </div>
+
+        <!-- 数据加载提示 -->
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>正在加载诗词数据...</p>
+        </div>
+
+        <!-- 猜词网格 -->
+        <div class="guess-grid" id="guessGrid" style="display: none;"></div>
+
+        <!-- 按钮 -->
+        <div class="button-group" id="buttonGroup" style="display: none;">
+            <button class="btn btn-primary" id="submitBtn" onclick="submitGuess()">提交</button>
+            <button class="btn btn-secondary" onclick="newGame()">重新开始</button>
+            <button class="btn btn-secondary" onclick="showAnswer()">查看答案</button>
+        </div>
+
+        <!-- 图例 -->
+        <div class="legend" id="legend" style="display: none;">
+            <div class="legend-item">
+                <div class="legend-box correct"></div>
+                <span>字位皆对</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box present"></div>
+                <span>字对位错</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box absent"></div>
+                <span>无此字</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- 庆祝动画容器 -->
+    <div class="celebration" id="celebration"></div>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <p>中华诗词文化 · 寻花令</p>
+    </footer>
+
+    <!-- 引入诗词数据 -->
+    <script src="poetry_data.js"></script>
+
+    <script>
+        // ==================== 静态版本 - 从外部 JS 文件加载诗词数据 ====================
+        // POETRY_DATABASE 来自 poetry_data.js，格式为原始text数组
+
+        // 游戏状态
+        let gameState = {
+            answer: '',
+            type: '',
+            length: 0,
+            currentRow: 0,
+            maxAttempts: 30,
+            isGameOver: false,
+            poemInfo: null
+        };
+
+        // 输入法组合状态标记
+        let isComposing = false;
+
+        // 初始化
+        window.onload = async function() {
+            createPetals();
+            setInterval(createPetals, 5000);
+
+            // 加载诗词数据
+            try {
+                await loadPoetryData();
+                hideLoading();
+                initGame();
+            } catch (error) {
+                console.error('Failed to load poetry data:', error);
+                showMessage('加载诗词数据失败，请刷新页面重试', 'error');
+            }
+        };
+
+        // 从外部 JS 文件加载诗词数据
+        function loadPoetryData() {
+            // POETRY_DATABASE 定义在 poetry_data.js 中
+            if (typeof POETRY_DATABASE === 'undefined') {
+                throw new Error('诗词数据未找到，请确保 poetry_data.js 文件存在');
+            }
+
+            console.log(`原始诗词数据加载完成: 共 ${POETRY_DATABASE.length} 条`);
+            return Promise.resolve();
+        }
+
+        // 解析单行诗词数据
+        function parsePoemLine(line) {
+            const parts = line.split('\t');
+            if (parts.length < 6) return null;
+
+            const [title, sentence, author, dynasty, lineCount, wordCount] = parts;
+
+            return {
+                title: title.trim(),
+                sentence: sentence.trim(),
+                author: author.trim(),
+                dynasty: dynasty.trim(),
+                wordCount: wordCount.trim()
+            };
+        }
+
+        // 检查并转换诗词为游戏格式
+        function convertToGameFormat(poem) {
+            // 只接受 5,5 或 7,7 格式
+            if (poem.wordCount !== '5,5' && poem.wordCount !== '7,7') {
+                return null;
+            }
+
+            // 提取纯汉字（去掉标点）
+            const cleanSentence = poem.sentence.replace(/[^\u4e00-\u9fa5]/g, '');
+
+            // 确定类型和长度
+            const type = poem.wordCount === '5,5' ? 'wuyan' : 'qiyan';
+            const length = poem.wordCount === '5,5' ? 10 : 14;
+
+            // 验证长度
+            if (cleanSentence.length !== length) {
+                return null;
+            }
+
+            // 分割两句
+            const halfLen = length / 2;
+            const halves = [
+                cleanSentence.substring(0, halfLen),
+                cleanSentence.substring(halfLen, length)
+            ];
+
+            return {
+                id: `${poem.title}_${cleanSentence}`,
+                type: type,
+                title: poem.title,
+                author: poem.author,
+                dynasty: poem.dynasty,
+                sentence: poem.sentence,
+                answer: cleanSentence,
+                length: length,
+                halves: halves,
+                wordCount: poem.wordCount
+            };
+        }
+
+        // 隐藏加载提示，显示游戏界面
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('guessGrid').style.display = 'flex';
+            document.getElementById('buttonGroup').style.display = 'flex';
+            document.getElementById('legend').style.display = 'flex';
+        }
+
+        // 创建飘落花瓣
+        function createPetals() {
+            const petalCount = 8;
+            for (let i = 0; i < petalCount; i++) {
+                setTimeout(() => {
+                    const petal = document.createElement('div');
+                    petal.className = 'petal';
+                    petal.style.left = Math.random() * 100 + 'vw';
+                    petal.style.animationDuration = (Math.random() * 5 + 10) + 's';
+                    petal.style.opacity = Math.random() * 0.4 + 0.2;
+                    document.body.appendChild(petal);
+                    setTimeout(() => petal.remove(), 15000);
+                }, i * 600);
+            }
+        }
+
+        // 初始化游戏 - 随机选择诗词，边选边验证格式
+        function initGame() {
+            if (typeof POETRY_DATABASE === 'undefined' || POETRY_DATABASE.length === 0) {
+                showMessage('诗词数据未加载', 'error');
+                return;
+            }
+
+            // 随机选择直到找到符合 5,5 或 7,7 格式的诗词
+            let gamePoem = null;
+            let attempts = 0;
+            const maxAttempts = 1000; // 防止无限循环
+
+            while (!gamePoem && attempts < maxAttempts) {
+                const randomLine = POETRY_DATABASE[Math.floor(Math.random() * POETRY_DATABASE.length)];
+                const parsed = parsePoemLine(randomLine);
+                if (parsed) {
+                    gamePoem = convertToGameFormat(parsed);
+                }
+                attempts++;
+            }
+
+            if (!gamePoem) {
+                showMessage('未能找到符合条件的诗词（5,5或7,7格式）', 'error');
+                return;
+            }
+
+            gameState.answer = gamePoem.answer;
+            gameState.type = gamePoem.type;
+            gameState.length = gamePoem.length;
+            gameState.poemInfo = gamePoem;
+
+            startGame();
+        }
+
+        // 开始游戏
+        function startGame() {
+            gameState.currentRow = 0;
+            gameState.isGameOver = false;
+
+            // 更新类型显示
+            const typeText = gameState.type === 'wuyan' ? '五言' : '七言';
+            document.getElementById('poemType').textContent = `${typeText} (${gameState.length}字)`;
+
+            // 初始化猜测次数
+            updateGuessCount();
+
+            // 清空网格
+            const grid = document.getElementById('guessGrid');
+            grid.innerHTML = '';
+
+            // 创建第一行输入框
+            addInputRow();
+
+            // 隐藏结果
+            document.getElementById('resultSection').classList.remove('show');
+            document.getElementById('submitBtn').disabled = false;
+
+            // 清空消息
+            hideMessage();
+        }
+
+        // 添加输入行
+        function addInputRow() {
+            const grid = document.getElementById('guessGrid');
+            const row = document.createElement('div');
+            row.className = `guess-row len-${gameState.length}`;
+            row.id = `row-${gameState.currentRow}`;
+
+            for (let i = 0; i < gameState.length; i++) {
+                const box = document.createElement('div');
+                box.className = 'char-box input-box';
+                box.id = `box-${gameState.currentRow}-${i}`;
+                box.contentEditable = true;
+                box.setAttribute('data-index', i);
+
+                // 输入事件
+                box.addEventListener('input', handleInput);
+                box.addEventListener('keydown', handleKeydown);
+                box.addEventListener('focus', handleFocus);
+
+                // 输入法组合事件
+                box.addEventListener('compositionstart', () => { isComposing = true; });
+                box.addEventListener('compositionend', (e) => {
+                    isComposing = false;
+                    handleInput(e);
+                });
+
+                row.appendChild(box);
+            }
+
+            grid.appendChild(row);
+
+            // 聚焦第一个输入框
+            setTimeout(() => {
+                const firstBox = document.getElementById(`box-${gameState.currentRow}-0`);
+                if (firstBox) firstBox.focus();
+            }, 100);
+        }
+
+        // 处理输入
+        function handleInput(e) {
+            if (isComposing) return;
+
+            const box = e.target;
+            const startIndex = parseInt(box.getAttribute('data-index'));
+            const text = box.textContent.trim();
+
+            // 提取所有中文汉字
+            const chineseChars = text.split('').filter(c => /[\u4e00-\u9fa5]/.test(c));
+
+            if (chineseChars.length === 0) {
+                box.textContent = '';
+                return;
+            }
+
+            // 将汉字分配到当前及后续的格子中
+            const row = gameState.currentRow;
+            let lastFilledIndex = startIndex;
+
+            for (let i = 0; i < chineseChars.length; i++) {
+                const targetIndex = startIndex + i;
+                if (targetIndex >= gameState.length) break;
+
+                const targetBox = document.getElementById(`box-${row}-${targetIndex}`);
+                if (targetBox) {
+                    targetBox.textContent = chineseChars[i];
+                    lastFilledIndex = targetIndex;
+                }
+            }
+
+            // 聚焦到最后一个填充的格子的下一个
+            const nextFocusIndex = Math.min(lastFilledIndex + 1, gameState.length - 1);
+            const nextBox = document.getElementById(`box-${row}-${nextFocusIndex}`);
+            if (nextBox) {
+                nextBox.focus();
+                if (nextBox.textContent.trim() === '') {
+                    const selection = window.getSelection();
+                    const range = document.createRange();
+                    range.selectNodeContents(nextBox);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+            }
+        }
+
+        // 处理键盘事件
+        function handleKeydown(e) {
+            const box = e.target;
+            const index = parseInt(box.getAttribute('data-index'));
+            const row = gameState.currentRow;
+
+            // 左箭头
+            if (e.key === 'ArrowLeft' && index > 0) {
+                e.preventDefault();
+                document.getElementById(`box-${row}-${index - 1}`).focus();
+            }
+
+            // 右箭头
+            if (e.key === 'ArrowRight' && index < gameState.length - 1) {
+                e.preventDefault();
+                document.getElementById(`box-${row}-${index + 1}`).focus();
+            }
+
+            // 回车提交
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitGuess();
+                return;
+            }
+
+            // Backspace 处理
+            if (e.key === 'Backspace') {
+                if (box.textContent.length === 0 && index > 0) {
+                    e.preventDefault();
+                    const prevBox = document.getElementById(`box-${row}-${index - 1}`);
+                    prevBox.focus();
+                    prevBox.textContent = '';
+                }
+            }
+        }
+
+        // 处理焦点
+        function handleFocus(e) {
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(e.target);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
+        // 获取当前行输入
+        function getCurrentGuess() {
+            let guess = '';
+            for (let i = 0; i < gameState.length; i++) {
+                const box = document.getElementById(`box-${gameState.currentRow}-${i}`);
+                guess += box.textContent.trim();
+            }
+            return guess;
+        }
+
+        // 提交猜测
+        function submitGuess() {
+            if (gameState.isGameOver) return;
+
+            const guess = getCurrentGuess();
+
+            // 检查是否输入完整
+            if (guess.length !== gameState.length) {
+                showMessage('请输入完整的诗句', 'error');
+                return;
+            }
+
+            // 验证是否全是汉字
+            if (!/^[\u4e00-\u9fa5]+$/.test(guess)) {
+                showMessage('请输入纯汉字', 'error');
+                return;
+            }
+
+            // 本地检查答案
+            const result = checkGuessLocal(guess);
+
+            // 显示结果
+            displayResult(result.result);
+
+            if (result.is_correct) {
+                // 猜对了
+                gameState.isGameOver = true;
+                document.getElementById('submitBtn').disabled = true;
+                showMessage('🎉 恭喜！你猜对了！', 'success');
+                showResult(true);
+                celebrate();
+            } else {
+                gameState.currentRow++;
+                updateGuessCount();
+
+                if (gameState.currentRow >= gameState.maxAttempts) {
+                    gameState.isGameOver = true;
+                    document.getElementById('submitBtn').disabled = true;
+                    showMessage('游戏结束', 'error');
+                    showResult(false);
+                } else {
+                    addInputRow();
+                }
+            }
+        }
+
+        // 本地检查答案
+        function checkGuessLocal(guess) {
+            const result = [];
+            const answer = gameState.answer;
+            const answerCharCounts = {};
+
+            // 统计答案中每个字符的出现次数
+            for (let char of answer) {
+                answerCharCounts[char] = (answerCharCounts[char] || 0) + 1;
+            }
+
+            // 第一遍：标记正确的位置
+            let correctCount = 0;
+            for (let i = 0; i < guess.length; i++) {
+                const char = guess[i];
+                if (i < answer.length && char === answer[i]) {
+                    result.push({ char, status: 'correct' });
+                    answerCharCounts[char]--;
+                    correctCount++;
+                } else {
+                    result.push({ char, status: 'unknown' });
+                }
+            }
+
+            // 第二遍：标记存在但位置错误的
+            for (let i = 0; i < result.length; i++) {
+                if (result[i].status === 'unknown') {
+                    const char = result[i].char;
+                    if (answerCharCounts[char] > 0) {
+                        result[i].status = 'present';
+                        answerCharCounts[char]--;
+                    } else {
+                        result[i].status = 'absent';
+                    }
+                }
+            }
+
+            return {
+                result,
+                is_correct: correctCount === answer.length && guess.length === answer.length
+            };
+        }
+
+        // 显示结果
+        function displayResult(result) {
+            const row = gameState.currentRow;
+
+            for (let i = 0; i < result.length; i++) {
+                const box = document.getElementById(`box-${row}-${i}`);
+                const item = result[i];
+
+                box.textContent = item.char;
+                box.classList.remove('input-box');
+                box.contentEditable = false;
+                box.classList.add(item.status);
+
+                box.style.animationDelay = `${i * 0.1}s`;
+            }
+        }
+
+        // 更新猜测次数显示
+        function updateGuessCount() {
+            const countEl = document.getElementById('guessCount');
+            countEl.textContent = `已猜: ${gameState.currentRow}`;
+        }
+
+        // 显示消息
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type} show`;
+
+            setTimeout(() => {
+                hideMessage();
+            }, 3000);
+        }
+
+        function hideMessage() {
+            const msg = document.getElementById('message');
+            msg.classList.remove('show');
+        }
+
+        // 显示答案
+        function showResult(isWin) {
+            const section = document.getElementById('resultSection');
+            const title = document.getElementById('resultTitle');
+            const poem = document.getElementById('resultPoem');
+            const author = document.getElementById('resultAuthor');
+
+            title.textContent = isWin ? '🎉 恭喜猜对！' : '📖 正确答案是';
+
+            if (gameState.poemInfo) {
+                poem.textContent = gameState.poemInfo.sentence;
+                author.textContent = `${gameState.poemInfo.dynasty} · ${gameState.poemInfo.author}《${gameState.poemInfo.title}》`;
+            }
+
+            section.classList.add('show');
+        }
+
+        // 查看答案
+        function showAnswer() {
+            if (!gameState.isGameOver) {
+                gameState.isGameOver = true;
+                document.getElementById('submitBtn').disabled = true;
+                showResult(false);
+            }
+        }
+
+        // 新游戏
+        function newGame() {
+            initGame();
+        }
+
+        // 庆祝动画
+        function celebrate() {
+            const container = document.getElementById('celebration');
+            const colors = ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#5f27cd'];
+
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.top = '-10px';
+                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                confetti.style.animationDelay = (Math.random() * 0.5) + 's';
+                container.appendChild(confetti);
+
+                setTimeout(() => confetti.remove(), 4000);
+            }
+        }
+
+        // 防止页面滚动
+        document.addEventListener('touchmove', function(e) {
+            if (e.target.closest('.guess-grid')) {
+                return;
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>
