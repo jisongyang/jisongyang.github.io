@@ -1187,7 +1187,13 @@
                 box.setAttribute('data-index', i);
 
                 // 输入事件
-                box.addEventListener('input', handleInput);
+                box.addEventListener('input', (e) => {
+                    // 如果在 composition 期间有新输入，取消之前的焦点移动计划
+                    if (box.getAttribute('data-focus-scheduled')) {
+                        box.removeAttribute('data-focus-scheduled');
+                    }
+                    handleInput(e);
+                });
                 box.addEventListener('keydown', handleKeydown);
                 box.addEventListener('focus', handleFocus);
 
@@ -1200,21 +1206,27 @@
                     // 输入法正在输入中
                     box.setAttribute('data-composing', 'true');
                 });
+                
+                // compositionend: 输入法候选词选择完成
+                // 关键点：不要立即处理，给用户时间选择更多候选词（如百度输入法的联想）
                 box.addEventListener('compositionend', (e) => {
                     isComposing = false;
                     box.removeAttribute('data-composing');
-                    // 延迟处理，确保输入法完成插入
+                    
+                    // 取消任何待处理的焦点移动，避免与 composition 处理冲突
+                    box.removeAttribute('data-focus-scheduled');
+                    
+                    // 对于移动端输入法，compositionend 后可能还有候选词（如百度联想）
+                    // 标记 composition 刚结束，input 处理时会检查此标记
+                    box.setAttribute('data-composition-just-ended', 'true');
+                    
+                    // 100ms后处理（给用户时间看到并点击候选词）
                     setTimeout(() => {
-                        handleInput(e);
-                    }, 50);
-                });
-
-                // 移动端：处理候选词选择（某些输入法不触发改事件）
-                box.addEventListener('beforeinput', (e) => {
-                    // 如果是插入文本且当前正在组合中，记录
-                    if (e.inputType === 'insertText' || e.inputType === 'insertCompositionText') {
-                        box.setAttribute('data-beforeinput-text', e.data || '');
-                    }
+                        if (box.getAttribute('data-composition-just-ended') === 'true') {
+                            box.removeAttribute('data-composition-just-ended');
+                            handleInput(e, true); // true = fromCompositionEnd（使用更长延迟）
+                        }
+                    }, 100);
                 });
 
                 row.appendChild(box);
@@ -1230,12 +1242,16 @@
         }
 
         // 处理输入
-        function handleInput(e) {
+        // fromCompositionEnd: 是否从 compositionend 触发（为 true 时不立即移动焦点）
+        function handleInput(e, fromCompositionEnd = false) {
             if (isComposing) return;
 
             const box = e.target;
             const startIndex = parseInt(box.getAttribute('data-index'));
             let text = box.textContent.trim();
+
+            // 清除 composition 标记
+            box.removeAttribute('data-composition-just-ended');
 
             // 移动端输入法可能插入非中文字符或空格，进行清理
             // 只保留中文汉字
@@ -1262,9 +1278,8 @@
                     targetBox.textContent = chineseChars[i];
                     lastFilledIndex = targetIndex;
 
-                    // 移动端：如果是候选词选择后的第一个字，聚焦到下一个空格子
+                    // 清理起始格子的内容（如果起始格被填充的字移动到了后面的格子）
                     if (i === 0 && box !== targetBox && document.activeElement === box) {
-                        // 确保当前输入框的内容被正确设置
                         if (box.getAttribute('data-index') !== String(targetIndex)) {
                             box.textContent = '';
                         }
@@ -1276,8 +1291,18 @@
             const nextFocusIndex = Math.min(lastFilledIndex + 1, gameState.length - 1);
             const nextBox = document.getElementById(`box-${row}-${nextFocusIndex}`);
             if (nextBox) {
-                // 延迟聚焦以确保移动端输入法完成处理
+                // 对于来自 compositionend 的输入（如百度候选词），给予更长延迟
+                // 让用户有充足时间选择输入法的联想候选词（如下半句）
+                const focusDelay = fromCompositionEnd ? 2000 : 50;
+                
+                // 标记即将有焦点移动计划
+                box.setAttribute('data-focus-scheduled', 'true');
+                
                 setTimeout(() => {
+                    // 检查是否被取消（有新输入或新的 composition）
+                    if (!box.getAttribute('data-focus-scheduled')) return;
+                    box.removeAttribute('data-focus-scheduled');
+                    
                     nextBox.focus();
                     if (nextBox.textContent.trim() === '') {
                         // 选中内容以便直接输入覆盖
@@ -1287,7 +1312,7 @@
                         selection.removeAllRanges();
                         selection.addRange(range);
                     }
-                }, 50);
+                }, focusDelay);
             }
         }
 
