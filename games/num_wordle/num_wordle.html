@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字猜词游戏</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f2f5;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            margin-top: 10px;
+        }
+
+        .game-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .digit-input {
+            width: 50px;
+            height: 60px;
+            font-size: 32px;
+            text-align: center;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .digit-input:focus {
+            border-color: #007bff;
+        }
+
+        /* 移除数字输入框的箭头 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+
+        button {
+            padding: 10px 30px;
+            font-size: 18px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .give-up-btn {
+            background-color: #6c757d;
+        }
+        
+        .give-up-btn:hover {
+            background-color: #5a6268;
+        }
+
+        .message {
+            margin-top: 15px;
+            font-size: 16px;
+            color: #d9534f;
+            height: 24px;
+        }
+
+        .history-container {
+            margin-top: 30px;
+            width: 100%;
+        }
+
+        .history-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            border-left: 5px solid #ccc;
+        }
+
+        .history-item.success {
+            border-left-color: #28a745;
+            background-color: #e6ffec;
+        }
+
+        .guess-digits {
+            font-family: monospace;
+            font-size: 20px;
+            font-weight: bold;
+            letter-spacing: 5px;
+        }
+
+        .feedback {
+            font-size: 14px;
+            color: #555;
+        }
+
+        .restart-btn {
+            background-color: #28a745;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .restart-btn:hover {
+            background-color: #218838;
+        }
+
+        /* 顶部操作区样式 */
+        .top-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #555;
+            padding: 5px;
+            transition: transform 0.2s, color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-btn:hover {
+            transform: scale(1.1);
+            color: #333;
+        }
+
+        .hint-fab {
+            /* 继承 icon-btn 样式 */
+        }
+
+        .hint-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 101;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .hint-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+        }
+
+        .hint-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #17a2b8;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .hint-close {
+            cursor: pointer;
+            color: #aaa;
+        }
+        
+        .recommendation-text {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .recommendation-loading {
+            color: #888;
+            font-style: italic;
+        }
+
+        /* 设置按钮样式 */
+        .settings-btn {
+            /* 继承 icon-btn 样式 */
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .action-buttons button {
+            flex: 1;
+        }
+
+        .settings-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 102;
+            width: 90%;
+            max-width: 350px;
+        }
+        
+        .settings-input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .save-diff-btn {
+            width: 100%;
+            background-color: #17a2b8;
+            margin-top: 5px;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+
+        .save-diff-btn:hover {
+            background-color: #138496;
+        }
+
+        .game-timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #555;
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 5px 15px;
+            border-radius: 20px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+            margin-bottom: 15px;
+        }
+
+        .settings-group {
+            margin: 15px 0;
+            text-align: left;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+
+        .settings-label {
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: block;
+            color: #333;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-controls">
+        <button class="icon-btn hint-fab" id="hintFab" title="查看智能提示">💡</button>
+        <button class="icon-btn settings-btn" id="settingsBtn" title="设置">⚙️</button>
+    </div>
+    <h1>数字猜猜看</h1>
+
+    <div class="game-container">
+        <div class="game-timer" id="timerDisplay">00:00</div>
+        <p>猜一个 4 位数字（数字可能重复）</p>
+        
+        <div class="input-group">
+            <input type="tel" class="digit-input" maxlength="1" id="input0" inputmode="numeric" pattern="[0-9]*">
+            <input type="tel" class="digit-input" maxlength="1" id="input1" inputmode="numeric" pattern="[0-9]*">
+            <input type="tel" class="digit-input" maxlength="1" id="input2" inputmode="numeric" pattern="[0-9]*">
+            <input type="tel" class="digit-input" maxlength="1" id="input3" inputmode="numeric" pattern="[0-9]*">
+        </div>
+
+        <div class="action-buttons">
+            <button id="guessBtn">猜一下</button>
+            <button id="giveUpBtn" class="give-up-btn">放弃 / 查看答案</button>
+        </div>
+        <button id="restartBtn" class="restart-btn">再玩一次</button>
+        
+        <div class="message" id="message"></div>
+
+        <!-- 悬浮窗已移至顶部 -->
+        
+        <div class="hint-modal-overlay" id="hintOverlay"></div>
+        <div class="hint-modal" id="hintModal">
+            <div class="hint-title">
+                智能提示
+                <span class="hint-close" id="hintClose">&times;</span>
+            </div>
+            <div class="recommendation-text" id="recommendationText"></div>
+        </div>
+
+        <!-- 设置弹窗 -->
+        <div class="settings-modal" id="settingsModal">
+            <div class="hint-title">
+                游戏设置
+                <span class="hint-close" id="settingsClose">&times;</span>
+            </div>
+            <div class="settings-group">
+                <span class="settings-label">1. 难度设置 (即时生效):</span>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="difficulty" value="easy" checked>
+                        简单 (显示位置及数字提示)
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="difficulty" value="hard">
+                        困难 (仅显示位置提示)
+                    </label>
+                </div>
+                <button id="saveDifficultyBtn" class="save-diff-btn">保存难度设置</button>
+            </div>
+
+            <div class="settings-group">
+                <span class="settings-label">2. 手动设定目标 (重新开始):</span>
+                <p style="margin: 5px 0; font-size: 14px; color: #666;">手动设定目标数字 (用于测试或挑战朋友)</p>
+                <input type="number" id="manualTargetInput" class="settings-input" placeholder="输入4位数字" maxlength="4">
+                <button id="saveSettingsBtn" style="width: 100%;">确认设定并开始新游戏</button>
+            </div>
+        </div>
+
+        <div class="history-container">
+            <div class="history-title">猜测记录</div>
+            <ul class="history-list" id="historyList">
+                <!-- 历史记录将在这里显示 -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const inputs = document.querySelectorAll('.digit-input');
+        const guessBtn = document.getElementById('guessBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const giveUpBtn = document.getElementById('giveUpBtn');
+        const messageEl = document.getElementById('message');
+        const historyList = document.getElementById('historyList');
+        const recommendationText = document.getElementById('recommendationText');
+        
+        const timerDisplay = document.getElementById('timerDisplay');
+        
+        // 提示相关 DOM
+        const hintFab = document.getElementById('hintFab');
+        const hintModal = document.getElementById('hintModal');
+        const hintOverlay = document.getElementById('hintOverlay');
+        const hintClose = document.getElementById('hintClose');
+
+        // 设置相关 DOM
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const settingsClose = document.getElementById('settingsClose');
+        const manualTargetInput = document.getElementById('manualTargetInput');
+        const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+
+        let targetNumber = '';
+        let isGameOver = false;
+        let guessCount = 0;
+        let possibleSet = []; // 当前可能的候选集
+        let hasViewedHint = false; // 当前轮次是否查看过提示
+        
+        // 计时与难度相关
+        let gameDifficulty = 'easy'; // 'easy' | 'hard'
+        let timerInterval = null;
+        let gameStartTime = 0;
+        let lastRoundTime = 0; // 上一轮结束的时间点
+
+        let isTimerStarted = false;
+
+        // 初始化游戏 (target 可选，如果传入则使用传入的，否则随机生成)
+        function initGame(manualTarget = null) {
+            // 重置计时器
+            stopTimer();
+            isTimerStarted = false;
+            timerDisplay.textContent = "00:00"; // 重置显示
+            lastRoundTime = Date.now(); // 初始化本轮开始时间
+
+            // 读取难度设置
+            const diffRadios = document.getElementsByName('difficulty');
+            for(let radio of diffRadios) {
+                if(radio.checked) gameDifficulty = radio.value;
+            }
+
+            if (manualTarget) {
+                targetNumber = manualTarget;
+            } else {
+                targetNumber = generateNumber();
+            }
+            console.log("Debug: Target is " + targetNumber); // 方便调试
+            inputs.forEach(input => input.value = '');
+            inputs[0].focus();
+            historyList.innerHTML = '';
+            messageEl.textContent = '';
+            isGameOver = false;
+            guessCount = 0;
+            
+            guessBtn.style.display = 'block';
+            guessBtn.disabled = false;
+            
+            giveUpBtn.style.display = 'block';
+            giveUpBtn.disabled = false;
+
+            restartBtn.style.display = 'none';
+            hintFab.style.display = 'flex'; // 显示悬浮窗
+            
+            // 初始化候选集 (0000-9999)
+            possibleSet = [];
+            for(let i=0; i<10000; i++) {
+                possibleSet.push(i.toString().padStart(4, '0'));
+            }
+
+            // 第一轮推荐
+            showRecommendation("首轮推荐：1234 (最大程度探测不同数字)");
+            hasViewedHint = false;
+        }
+
+        // 生成4位数字字符串（允许重复）
+        function generateNumber() {
+            let result = '';
+            for (let i = 0; i < 4; i++) {
+                result += Math.floor(Math.random() * 10).toString();
+            }
+            return result;
+        }
+
+        // 输入框自动跳转逻辑
+        inputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                // 只允许数字输入
+                input.value = input.value.replace(/\D/g, '');
+
+                if (input.value.length > 1) {
+                    input.value = input.value.slice(0, 1);
+                }
+                if (input.value.length === 1) {
+                    if (index < 3) {
+                        inputs[index + 1].focus();
+                    }
+                }
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && input.value === '') {
+                    if (index > 0) {
+                        inputs[index - 1].focus();
+                    }
+                }
+                if (e.key === 'Enter') {
+                    handleGuess();
+                }
+            });
+        });
+
+        // 处理猜测
+        function handleGuess() {
+            if (isGameOver) return;
+
+            // 收集输入
+            let guess = '';
+            for (let input of inputs) {
+                const val = input.value;
+                if (val === '') {
+                    showMessage('请输入完整的4位数字');
+                    return;
+                }
+                guess += val;
+            }
+
+            showMessage(''); // 清除错误信息
+            
+            // 如果是第一次猜测，启动计时器
+            if (!isTimerStarted) {
+                isTimerStarted = true;
+                gameStartTime = Date.now();
+                startTimer();
+                lastRoundTime=gameStartTime;
+                // 第一轮的 lastRoundTime 已经在 initGame 中初始化，或者在这里重新对齐到游戏开始时间？
+                // 如果希望第一轮耗时包含思考时间，则不需要重置 lastRoundTime
+                // 如果希望第一轮耗时仅从点击开始算（那通常是0），这里保持原样即可计算思考时间。
+            }
+
+            guessCount++;
+            
+            // 计算本轮耗时
+            const now = Date.now();
+            const duration = Math.round((now - lastRoundTime) / 1000); // 秒
+            lastRoundTime = now;
+
+            
+            // 计算反馈 (A: 位置数值都对, B: 数值对位置不对)
+            // 允许重复数字时的逻辑：
+            // 1. 先统计完全匹配 (A)
+            // 2. 统计剩下的数字中，有多少能匹配上 (B)
+            
+            let countA = 0;
+            let countB = 0;
+            
+            let targetRemain = [];
+            let guessRemain = [];
+
+            // 第一遍扫描：计算 A (位置数值都对)
+            for (let i = 0; i < 4; i++) {
+                if (guess[i] === targetNumber[i]) {
+                    countA++;
+                } else {
+                    targetRemain.push(targetNumber[i]);
+                    guessRemain.push(guess[i]);
+                }
+            }
+
+            // 第二遍扫描：计算 B (数值对位置不对)
+            for (let char of guessRemain) {
+                const index = targetRemain.indexOf(char);
+                if (index !== -1) {
+                    countB++;
+                    targetRemain.splice(index, 1); // 移除已匹配的，防止重复计算
+                }
+            }
+
+            // 添加历史记录
+            addHistory(guess, countA, countB, guessCount, hasViewedHint, duration);
+            
+            // 重置提示查看状态
+            hasViewedHint = false;
+
+            // 检查胜利
+            if (countA === 4) {
+                endGame(true);
+            } else {
+                // 更新候选集并计算下轮推荐
+                updatePossibleSet(guess, countA, countB);
+                
+                // 清空输入框并聚焦第一个
+                inputs.forEach(input => input.value = '');
+                inputs[0].focus();
+            }
+        }
+
+        // 计算两个数字之间的反馈结果
+        function calculateFeedback(guess, target) {
+            let countA = 0;
+            let countB = 0;
+            let targetRemain = [];
+            let guessRemain = [];
+
+            // A
+            for (let i = 0; i < 4; i++) {
+                if (guess[i] === target[i]) {
+                    countA++;
+                } else {
+                    targetRemain.push(target[i]);
+                    guessRemain.push(guess[i]);
+                }
+            }
+            // B
+            for (let char of guessRemain) {
+                const index = targetRemain.indexOf(char);
+                if (index !== -1) {
+                    countB++;
+                    targetRemain.splice(index, 1);
+                }
+            }
+            return { A: countA, B: countB };
+        }
+
+        // 更新候选集并推荐
+        function updatePossibleSet(lastGuess, realA, realB) {
+            recommendationText.innerHTML = '<span class="recommendation-loading">正在计算下轮最佳猜测...</span>';
+            
+            // 异步计算避免卡顿
+            setTimeout(() => {
+                // 1. 过滤：保留符合本次反馈的候选
+                possibleSet = possibleSet.filter(candidate => {
+                    const feedback = calculateFeedback(lastGuess, candidate);
+                    // 困难模式下，玩家只能看到位置正确的数量(A)，看不到数值对位置不对的数量(B)
+                    // 因此算法也应该只利用 A 的信息来排除候选
+                    if (gameDifficulty === 'hard') {
+                        return feedback.A === realA;
+                    }
+                    return feedback.A === realA && feedback.B === realB;
+                });
+
+                if (possibleSet.length === 0) {
+                    showRecommendation("好像哪里出错了，没有符合条件的数字了？");
+                    return;
+                }
+                
+                if (possibleSet.length === 1) {
+                    showRecommendation(`只剩唯一可能：<strong>${possibleSet[0]}</strong>`);
+                    return;
+                }
+
+                if (possibleSet.length <= 10) {
+                    showRecommendation(`剩余可能少于10个，建议尝试：<strong>${possibleSet[0]}</strong> (剩余: ${possibleSet.join(', ')})`);
+                    return;
+                }
+
+                // 2. 寻找最佳猜测 (Minimax 策略)
+                // 优化策略：不再随机采样，而是全量或策略性评估，以保证推荐质量
+                
+                let bestGuess = possibleSet[0];
+                let minMaxRemaining = Infinity;
+
+                // 性能阈值：如果剩余数量在可接受范围内，进行全量 Minimax 计算
+                // JS 引擎在几百毫秒内处理 25万次 (500*500) 简单运算没问题
+                const PERFORMANCE_THRESHOLD = 500;
+                
+                let candidatesToEvaluate = [];
+                
+                if (possibleSet.length <= PERFORMANCE_THRESHOLD) {
+                    // 全量评估所有剩余可能，找出理论最优解
+                    candidatesToEvaluate = possibleSet;
+                } else {
+                    // 如果集合依然很大，全量计算会卡顿
+                    // 策略优化：
+                    // 1. 优先评估无重复数字的候选（通常信息熵更高，区分度更好）
+                    // 2. 取前 N 个进行评估，保证结果确定性，避免随机感
+                    
+                    // 筛选出无重复数字的候选
+                    let uniqueDigitsCandidates = possibleSet.filter(num => {
+                        return new Set(num.split('')).size === 4;
+                    });
+                    
+                    // 优先评估无重复数字的候选，如果没有则评估普通候选
+                    // 评估数量限制在 50 个以内以保证响应速度
+                    if (uniqueDigitsCandidates.length > 0) {
+                        candidatesToEvaluate = uniqueDigitsCandidates.slice(0, 50);
+                    } else {
+                        candidatesToEvaluate = possibleSet.slice(0, 50);
+                    }
+                }
+
+                for (let guessCandidate of candidatesToEvaluate) {
+                    let feedbackCounts = {}; // 记录每种反馈(如 "1A2B") 对应的剩余数量
+                    
+                    // 针对当前所有可能的答案，计算如果猜 guessCandidate 会得到什么反馈
+                    for (let possibleAns of possibleSet) {
+                        const fb = calculateFeedback(guessCandidate, possibleAns);
+                        // 困难模式下，反馈只有 A；普通模式下有 A 和 B
+                        const key = (gameDifficulty === 'hard') ? `${fb.A}` : `${fb.A}${fb.B}`;
+                        feedbackCounts[key] = (feedbackCounts[key] || 0) + 1;
+                    }
+
+                    // 找出最坏情况 (Max Remaining)
+                    let maxRemaining = 0;
+                    for (let key in feedbackCounts) {
+                        if (feedbackCounts[key] > maxRemaining) {
+                            maxRemaining = feedbackCounts[key];
+                        }
+                    }
+
+                    // Minimax: 寻找能让 "最坏情况下的剩余数量" 最小的猜测
+                    // 如果 maxRemaining 相同，倾向于保持原有的顺序（通常数值较小）
+                    if (maxRemaining < minMaxRemaining) {
+                        minMaxRemaining = maxRemaining;
+                        bestGuess = guessCandidate;
+                    }
+                }
+
+                showRecommendation(`剩余 ${possibleSet.length} 种可能。推荐猜测：<strong>${bestGuess}</strong> (基于最优策略计算)`);
+            }, 50);
+        }
+
+        function showRecommendation(text) {
+            recommendationText.innerHTML = text;
+        }
+
+        function addHistory(guess, countA, countB, count, viewedHint, duration) {
+            const li = document.createElement('li');
+            li.className = 'history-item';
+            if (countA === 4) li.classList.add('success');
+
+            const guessInfo = document.createElement('div');
+            
+            const roundSpan = document.createElement('span');
+            roundSpan.style.marginRight = '10px';
+            roundSpan.style.color = viewedHint ? 'red' : '#888';
+            roundSpan.style.fontWeight = viewedHint ? 'bold' : 'normal';
+            roundSpan.textContent = `[第${count}次]`;
+
+            const guessSpan = document.createElement('span');
+            guessSpan.className = 'guess-digits';
+            guessSpan.textContent = guess;
+            
+            guessInfo.appendChild(roundSpan);
+            guessInfo.appendChild(guessSpan);
+
+            const rightSection = document.createElement('div');
+            rightSection.style.display = 'flex';
+            rightSection.style.flexDirection = 'column';
+            rightSection.style.alignItems = 'flex-end';
+
+            const feedbackSpan = document.createElement('span');
+            feedbackSpan.className = 'feedback';
+            
+            if (gameDifficulty === 'easy') {
+                feedbackSpan.textContent = `${countB+countA}个数字对，${countA}个数字和位置都对`;
+            } else {
+                feedbackSpan.textContent = `${countA}个数字和位置都对`;
+            }
+
+            const timeSpan = document.createElement('span');
+            timeSpan.style.fontSize = '12px';
+            timeSpan.style.color = '#999';
+            timeSpan.textContent = `耗时: ${duration}秒`;
+
+            rightSection.appendChild(feedbackSpan);
+            rightSection.appendChild(timeSpan);
+
+            li.appendChild(guessInfo);
+            li.appendChild(rightSection);
+            
+            // 插入到最前面
+            historyList.insertBefore(li, historyList.firstChild);
+        }
+
+        // 计时器功能
+        function startTimer() {
+            updateTimerDisplay();
+            timerInterval = setInterval(updateTimerDisplay, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function updateTimerDisplay() {
+            if (!isTimerStarted) {
+                // 如果计时还没开始，保持 00:00
+                timerDisplay.textContent = "00:00";
+                return;
+            }
+            const now = Date.now();
+            const diffInSeconds = Math.floor((now - gameStartTime) / 1000);
+            
+            const minutes = Math.floor(diffInSeconds / 60).toString().padStart(2, '0');
+            const seconds = (diffInSeconds % 60).toString().padStart(2, '0');
+            
+            timerDisplay.textContent = `${minutes}:${seconds}`;
+        }
+
+        function showMessage(msg) {
+            messageEl.textContent = msg;
+        }
+
+        function endGame(won) {
+            isGameOver = true;
+            stopTimer(); // 停止计时
+            guessBtn.disabled = true;
+            guessBtn.style.display = 'none';
+            giveUpBtn.style.display = 'none';
+            restartBtn.style.display = 'block';
+            hintFab.style.display = 'none'; // 结束隐藏推荐按钮
+            
+            if (won) {
+                showMessage(`🎉 恭喜你！在第 ${guessCount} 次猜对了！`);
+            } else {
+                showMessage(`游戏结束。正确答案是：${targetNumber}`);
+            }
+        }
+
+        function giveUp() {
+            if (confirm('确定要放弃并查看答案吗？')) {
+                endGame(false);
+                // 自动填充正确答案展示
+                for(let i=0; i<4; i++) {
+                    inputs[i].value = targetNumber[i];
+                }
+            }
+        }
+
+        guessBtn.addEventListener('click', handleGuess);
+        giveUpBtn.addEventListener('click', giveUp);
+        restartBtn.addEventListener('click', () => initGame());
+
+        // 提示窗口事件
+        function toggleHintModal(show) {
+            hintModal.style.display = show ? 'block' : 'none';
+            hintOverlay.style.display = show ? 'block' : 'none';
+        }
+
+        hintFab.addEventListener('click', () => {
+            toggleHintModal(true);
+            hasViewedHint = true;
+        });
+        hintClose.addEventListener('click', () => toggleHintModal(false));
+        hintOverlay.addEventListener('click', () => {
+            toggleHintModal(false);
+            toggleSettingsModal(false);
+        });
+
+        // 设置窗口事件
+        function toggleSettingsModal(show) {
+            settingsModal.style.display = show ? 'block' : 'none';
+            hintOverlay.style.display = show ? 'block' : 'none';
+        }
+
+        settingsBtn.addEventListener('click', () => {
+            // 打开设置时，回显当前难度
+            const diffRadios = document.getElementsByName('difficulty');
+            for(let radio of diffRadios) {
+                if(radio.value === gameDifficulty) radio.checked = true;
+            }
+            toggleSettingsModal(true);
+        });
+        settingsClose.addEventListener('click', () => toggleSettingsModal(false));
+
+        // 独立保存难度
+        saveDifficultyBtn.addEventListener('click', () => {
+            const diffRadios = document.getElementsByName('difficulty');
+            for(let radio of diffRadios) {
+                if(radio.checked) {
+                    gameDifficulty = radio.value;
+                    break;
+                }
+            }
+            toggleSettingsModal(false);
+            showMessage(`难度已更新为：${gameDifficulty === 'easy' ? '简单' : '困难'}`);
+        });
+
+        // 独立保存目标数字并重启
+        saveSettingsBtn.addEventListener('click', () => {
+            const val = manualTargetInput.value;
+            if (val.length === 4 && !isNaN(val)) {
+                initGame(val);
+                toggleSettingsModal(false);
+                // 给一点提示
+                setTimeout(() => showMessage('已设置新目标数字，游戏重新开始！'), 100);
+            } else {
+                alert('请输入有效的4位数字');
+            }
+        });
+
+        // 启动游戏
+        initGame();
+
+    </script>
+</body>
+</html>
