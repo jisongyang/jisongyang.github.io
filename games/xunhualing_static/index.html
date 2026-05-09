@@ -116,6 +116,247 @@
             letter-spacing: 3px;
         }
 
+        /* 菜单按钮样式 */
+        .menu-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .menu-btn {
+            background: rgba(233, 69, 96, 0.2);
+            border: 1px solid rgba(233, 69, 96, 0.4);
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: #ffdde1;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .menu-btn:hover {
+            background: rgba(233, 69, 96, 0.3);
+            transform: scale(1.05);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: rgba(22, 33, 62, 0.95);
+            border: 1px solid rgba(233, 69, 96, 0.3);
+            border-radius: 8px;
+            padding: 8px 0;
+            min-width: 140px;
+            display: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 10px 16px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 14px;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(233, 69, 96, 0.2);
+        }
+
+        .dropdown-item.disabled {
+            color: var(--text-muted);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .dropdown-item.disabled:hover {
+            background: transparent;
+        }
+
+        /* 模态框样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            border: 1px solid rgba(233, 69, 96, 0.3);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 450px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #ffdde1;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            appearance: auto;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* 确保下拉选项在深色背景下可见 */
+        .form-select option {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+            padding: 8px;
+        }
+
+        .form-select option:hover,
+        .form-select option:focus,
+        .form-select option:checked {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* 移动端下拉菜单兼容性 */
+        @media (max-width: 480px) {
+            .form-select {
+                font-size: 16px; /* 防止iOS缩放 */
+                min-height: 44px;
+            }
+        }
+
+        .form-hint {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .modal-btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            color: white;
+        }
+
+        .modal-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+        }
+
+        .modal-btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* 导出代码区域 */
+        .export-section {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .export-section.show {
+            display: block;
+        }
+
+        .export-textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+
+        .copy-btn {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: rgba(106, 170, 100, 0.3);
+            border: 1px solid rgba(106, 170, 100, 0.5);
+            border-radius: 6px;
+            color: #6aaa64;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: rgba(106, 170, 100, 0.4);
+        }
+
         /* 游戏信息 */
         .game-info {
             display: flex;
@@ -285,6 +526,17 @@
         .btn-secondary:hover {
             background: rgba(255, 255, 255, 0.2);
             color: white;
+        }
+
+        .btn-danger {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+            border: 1px solid rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-danger:hover {
+            background: rgba(231, 76, 60, 0.3);
+            transform: translateY(-2px);
         }
 
         /* 提示信息 */
@@ -534,8 +786,137 @@
     <!-- 头部 -->
     <header class="header">
         <h1 class="title">寻花令</h1>
-        <p class="subtitle">猜诗词 · 品经典</p>
+        <!-- <p class="subtitle">猜诗词 · 品经典</p> -->
     </header>
+
+    <!-- 菜单按钮 -->
+    <div class="menu-container">
+        <button class="menu-btn" onclick="toggleMenu()">
+            <span>☰</span> 
+        </button>
+        <div class="dropdown-menu" id="dropdownMenu">
+            <div class="dropdown-item" id="hintMenuItem" onclick="showHint()">💡 获取提示</div>
+            <div class="dropdown-item" onclick="openAddPoemModal()">➕ 添加诗词</div>
+            <div class="dropdown-item" onclick="openExportModal()">📋 导出数据</div>
+        </div>
+    </div>
+
+    <!-- 添加诗词模态框 -->
+    <div class="modal-overlay" id="addPoemModal">
+        <div class="modal-content">
+            <h2 class="modal-title">添加新诗词</h2>
+            <form id="addPoemForm">
+                <div class="form-group">
+                    <label class="form-label">诗词标题 *</label>
+                    <input type="text" class="form-input" id="poemTitle" placeholder="如：静夜思" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">诗句 *</label>
+                    <input type="text" class="form-input" id="poemSentence" placeholder="如：床前明月光，疑是地上霜。" required>
+                    <p class="form-hint">请输入两句诗，用中文逗号或句号分隔</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">作者 *</label>
+                    <input type="text" class="form-input" id="poemAuthor" placeholder="如：李白" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">朝代 *</label>
+                    <select class="form-select" id="poemDynasty" name="dynasty" required>
+                        <option value="" disabled selected>请选择朝代</option>
+                        <option value="先秦">先秦</option>
+                        <option value="汉代">汉代</option>
+                        <option value="魏晋">魏晋</option>
+                        <option value="南北朝">南北朝</option>
+                        <option value="隋代">隋代</option>
+                        <option value="唐代" selected>唐代</option>
+                        <option value="宋代">宋代</option>
+                        <option value="元代">元代</option>
+                        <option value="明代">明代</option>
+                        <option value="清代">清代</option>
+                        <option value="近现代">近现代</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">格式</label>
+                    <select class="form-select" id="poemFormat">
+                        <option value="auto">自动检测（推荐）</option>
+                        <option value="5,5">五言绝句（两句，每句5字）</option>
+                        <option value="7,7">七言绝句（两句，每句7字）</option>
+                    </select>
+                </div>
+            </form>
+            <div class="export-section" id="addSuccessSection">
+                <p style="color: #6aaa64; margin-bottom: 10px;">✅ 诗词已添加！点击下面按钮导出完整数据：</p>
+                <textarea class="export-textarea" id="exportCodeArea" readonly></textarea>
+                <button class="copy-btn" onclick="copyExportCode()">📋 复制代码</button>
+                <button class="copy-btn" onclick="downloadPoetryData()" style="margin-left: 10px; background: rgba(233, 69, 96, 0.3); border-color: rgba(233, 69, 96, 0.5); color: #ffdde1;">💾 下载文件</button>
+            </div>
+            <div class="modal-buttons" id="addModalButtons">
+                <button class="modal-btn modal-btn-secondary" onclick="closeAddPoemModal()">取消</button>
+                <button class="modal-btn modal-btn-primary" onclick="addPoem()">添加诗词</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导出数据模态框 -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal-content">
+            <h2 class="modal-title">导出诗词数据</h2>
+            <p style="margin-bottom: 15px; color: var(--text-secondary); font-size: 14px; line-height: 1.8;">
+                当前共有 <strong id="totalPoemCount">0</strong> 首诗词<br>
+                其中 <strong id="customPoemCount" style="color: #6aaa64;">0</strong> 首为自定义添加<br>
+                已删除 <strong id="deletedPoemCount" style="color: #e74c3c;">0</strong> 首（本次会话）
+            </p>
+            <div class="export-section show">
+                <p class="form-hint" style="margin-bottom: 8px;">完整 poetry_data.js 代码：</p>
+                <textarea class="export-textarea" id="fullExportArea" readonly></textarea>
+                <button class="copy-btn" onclick="copyFullExport()">📋 复制代码</button>
+                <button class="copy-btn" onclick="downloadFullPoetryData()" style="margin-left: 10px; background: rgba(233, 69, 96, 0.3); border-color: rgba(233, 69, 96, 0.5); color: #ffdde1;">💾 下载文件</button>
+            </div>
+            <div class="modal-buttons" style="margin-top: 15px;">
+                <button class="modal-btn modal-btn-secondary" onclick="closeExportModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div class="modal-overlay" id="deleteConfirmModal">
+        <div class="modal-content" style="max-width: 380px;">
+            <h2 class="modal-title" style="color: #e74c3c;">⚠️ 确认删除</h2>
+            <p style="margin: 15px 0; color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
+                确定要删除这首诗词吗？<br><br>
+                <strong id="deletePoemInfo" style="color: var(--text-primary);"></strong><br><br>
+                <span style="color: #e74c3c;">此操作不可恢复！</span>
+            </p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" onclick="closeDeleteModal()">取消</button>
+                <button class="modal-btn modal-btn-primary" onclick="deleteCurrentPoem()" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">确认删除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示模态框 -->
+    <div class="modal-overlay" id="hintModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <h2 class="modal-title" style="color: #feca57;">💡 提示</h2>
+            <p style="margin: 15px 0; color: var(--text-secondary); font-size: 14px;">
+                这首诗词也包含你猜对的字：
+            </p>
+            <div style="background: rgba(254, 202, 87, 0.1); border: 1px solid rgba(254, 202, 87, 0.3); border-radius: 8px; padding: 15px; margin: 15px 0;">
+                <p id="hintPoemInfo" style="color: var(--text-secondary); font-size: 13px; margin-bottom: 8px;"></p>
+                <p id="hintPoemSentence" style="color: var(--text-primary); font-size: 18px; letter-spacing: 2px; line-height: 1.6;"></p>
+            </div>
+            <p id="hintMatchedChars" style="color: #feca57; font-size: 13px; margin-bottom: 15px;"></p>
+            <p style="color: var(--text-muted); font-size: 12px; margin-top: 10px;">
+                提示：这只是包含相同字的其他诗词，不一定是答案哦～
+            </p>
+            <div class="modal-buttons" style="margin-top: 15px;">
+                <button class="modal-btn modal-btn-secondary" onclick="closeHintModal()">关闭</button>
+                <button class="modal-btn modal-btn-primary" onclick="showHint()" style="background: linear-gradient(135deg, #feca57, #f39c12); color: #1a1a2e;">换一条</button>
+            </div>
+        </div>
+    </div>
 
     <!-- 游戏区 -->
     <main class="game-container">
@@ -553,6 +934,7 @@
             <div class="result-title" id="resultTitle"></div>
             <div class="result-poem" id="resultPoem"></div>
             <div class="result-author" id="resultAuthor"></div>
+            <button class="btn btn-danger" id="deletePoemBtn" onclick="confirmDeletePoem()" style="display: none; margin-top: 15px;">🗑️ 删除此诗词</button>
         </div>
 
         <!-- 数据加载提示 -->
@@ -566,8 +948,8 @@
 
         <!-- 按钮 -->
         <div class="button-group" id="buttonGroup" style="display: none;">
-            <button class="btn btn-primary" id="submitBtn" onclick="submitGuess()">提交</button>
             <button class="btn btn-secondary" onclick="newGame()">重新开始</button>
+            <button class="btn btn-primary" id="submitBtn" onclick="submitGuess()">提交</button>
             <button class="btn btn-secondary" onclick="showAnswer()">查看答案</button>
         </div>
 
@@ -593,7 +975,7 @@
 
     <!-- 页脚 -->
     <footer class="footer">
-        <p>中华诗词文化 · 寻花令</p>
+        <p>木草公 · 寻花令</p>
     </footer>
 
     <!-- 引入诗词数据 -->
@@ -625,6 +1007,11 @@
             // 加载诗词数据
             try {
                 await loadPoetryData();
+                // 加载已删除的原始诗词记录
+                loadDeletedOriginalPoems();
+                applyDeletedOriginalPoems();
+                // 加载用户自定义的诗词（从 localStorage）
+                loadCustomPoems();
                 hideLoading();
                 initGame();
             } catch (error) {
@@ -804,11 +1191,30 @@
                 box.addEventListener('keydown', handleKeydown);
                 box.addEventListener('focus', handleFocus);
 
-                // 输入法组合事件
-                box.addEventListener('compositionstart', () => { isComposing = true; });
+                // 输入法组合事件 - 优化移动端候选词选择
+                box.addEventListener('compositionstart', () => { 
+                    isComposing = true; 
+                    box.setAttribute('data-composing', 'true');
+                });
+                box.addEventListener('compositionupdate', (e) => {
+                    // 输入法正在输入中
+                    box.setAttribute('data-composing', 'true');
+                });
                 box.addEventListener('compositionend', (e) => {
                     isComposing = false;
-                    handleInput(e);
+                    box.removeAttribute('data-composing');
+                    // 延迟处理，确保输入法完成插入
+                    setTimeout(() => {
+                        handleInput(e);
+                    }, 50);
+                });
+
+                // 移动端：处理候选词选择（某些输入法不触发改事件）
+                box.addEventListener('beforeinput', (e) => {
+                    // 如果是插入文本且当前正在组合中，记录
+                    if (e.inputType === 'insertText' || e.inputType === 'insertCompositionText') {
+                        box.setAttribute('data-beforeinput-text', e.data || '');
+                    }
                 });
 
                 row.appendChild(box);
@@ -829,7 +1235,11 @@
 
             const box = e.target;
             const startIndex = parseInt(box.getAttribute('data-index'));
-            const text = box.textContent.trim();
+            let text = box.textContent.trim();
+
+            // 移动端输入法可能插入非中文字符或空格，进行清理
+            // 只保留中文汉字
+            text = text.replace(/[^\u4e00-\u9fa5]/g, '');
 
             // 提取所有中文汉字
             const chineseChars = text.split('').filter(c => /[\u4e00-\u9fa5]/.test(c));
@@ -851,6 +1261,14 @@
                 if (targetBox) {
                     targetBox.textContent = chineseChars[i];
                     lastFilledIndex = targetIndex;
+
+                    // 移动端：如果是候选词选择后的第一个字，聚焦到下一个空格子
+                    if (i === 0 && box !== targetBox && document.activeElement === box) {
+                        // 确保当前输入框的内容被正确设置
+                        if (box.getAttribute('data-index') !== String(targetIndex)) {
+                            box.textContent = '';
+                        }
+                    }
                 }
             }
 
@@ -858,14 +1276,18 @@
             const nextFocusIndex = Math.min(lastFilledIndex + 1, gameState.length - 1);
             const nextBox = document.getElementById(`box-${row}-${nextFocusIndex}`);
             if (nextBox) {
-                nextBox.focus();
-                if (nextBox.textContent.trim() === '') {
-                    const selection = window.getSelection();
-                    const range = document.createRange();
-                    range.selectNodeContents(nextBox);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                }
+                // 延迟聚焦以确保移动端输入法完成处理
+                setTimeout(() => {
+                    nextBox.focus();
+                    if (nextBox.textContent.trim() === '') {
+                        // 选中内容以便直接输入覆盖
+                        const selection = window.getSelection();
+                        const range = document.createRange();
+                        range.selectNodeContents(nextBox);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
+                }, 50);
             }
         }
 
@@ -1058,12 +1480,29 @@
             const title = document.getElementById('resultTitle');
             const poem = document.getElementById('resultPoem');
             const author = document.getElementById('resultAuthor');
+            const deleteBtn = document.getElementById('deletePoemBtn');
 
             title.textContent = isWin ? '🎉 恭喜猜对！' : '📖 正确答案是';
 
             if (gameState.poemInfo) {
-                poem.textContent = gameState.poemInfo.sentence;
+                // 将诗句拆分为两句显示，自动换行
+                const sentence = gameState.poemInfo.sentence;
+                // 按常见标点分割：，。, . ；;
+                const parts = sentence.split(/([，。,\.;；])/);
+                if (parts.length >= 3) {
+                    // 重新组合：第一句 + 标点 + <br> + 第二句 + 标点
+                    const line1 = parts[0] + (parts[1] || '');
+                    const line2 = parts.slice(2).join('');
+                    poem.innerHTML = `${line1}<br>${line2}`;
+                } else {
+                    poem.textContent = sentence;
+                }
                 author.textContent = `${gameState.poemInfo.dynasty} · ${gameState.poemInfo.author}《${gameState.poemInfo.title}》`;
+            }
+
+            // 显示删除按钮
+            if (deleteBtn) {
+                deleteBtn.style.display = 'inline-block';
             }
 
             section.classList.add('show');
@@ -1081,6 +1520,119 @@
         // 新游戏
         function newGame() {
             initGame();
+            // 隐藏删除按钮
+            const deleteBtn = document.getElementById('deletePoemBtn');
+            if (deleteBtn) {
+                deleteBtn.style.display = 'none';
+            }
+        }
+
+        // 确认删除弹窗
+        function confirmDeletePoem() {
+            if (!gameState.poemInfo) return;
+
+            const info = document.getElementById('deletePoemInfo');
+            info.innerHTML = `${gameState.poemInfo.dynasty} · ${gameState.poemInfo.author}<br>《${gameState.poemInfo.title}》<br>${gameState.poemInfo.sentence}`;
+            
+            document.getElementById('deleteConfirmModal').classList.add('show');
+        }
+
+        // 关闭删除确认框
+        function closeDeleteModal() {
+            document.getElementById('deleteConfirmModal').classList.remove('show');
+        }
+
+        // 删除当前诗词
+        function deleteCurrentPoem() {
+            if (!gameState.poemInfo) {
+                closeDeleteModal();
+                return;
+            }
+
+            const sentence = gameState.poemInfo.sentence;
+            const poemChars = sentence.replace(/[^\u4e00-\u9fa5]/g, '');
+
+            // 查找并删除
+            let deleted = false;
+            let deletedRecord = null;
+
+            // 从 POETRY_DATABASE 中删除
+            for (let i = POETRY_DATABASE.length - 1; i >= 0; i--) {
+                const parts = POETRY_DATABASE[i].split('\t');
+                if (parts.length >= 2) {
+                    const existingChars = parts[1].replace(/[^\u4e00-\u9fa5]/g, '');
+                    if (existingChars === poemChars) {
+                        deletedRecord = POETRY_DATABASE.splice(i, 1)[0];
+                        deleted = true;
+                        break;
+                    }
+                }
+            }
+
+            // 如果删除成功，也从 customPoems 中删除
+            if (deleted && deletedRecord) {
+                const customIndex = customPoems.indexOf(deletedRecord);
+                if (customIndex > -1) {
+                    customPoems.splice(customIndex, 1);
+                    saveCustomPoems();
+                    showMessage('🗑️ 已删除自定义诗词', 'success');
+                } else {
+                    // 删除的是原始诗词（不在 customPoems 中）
+                    // 需要记录这个删除操作，避免下次加载时恢复
+                    saveDeletedOriginalPoem(deletedRecord);
+                    showMessage('🗑️ 已删除原始诗词（导出时将不包含此诗词）', 'success');
+                }
+
+                closeDeleteModal();
+                
+                // 隐藏结果区域和删除按钮
+                document.getElementById('resultSection').classList.remove('show');
+                document.getElementById('deletePoemBtn').style.display = 'none';
+                
+                // 自动开始新游戏
+                setTimeout(() => {
+                    newGame();
+                }, 1500);
+            } else {
+                alert('删除失败，未找到该诗词');
+                closeDeleteModal();
+            }
+        }
+
+        // 保存已删除的原始诗词记录
+        const DELETED_POEMS_KEY = 'xunhualing_deleted_poems';
+        let deletedOriginalPoems = [];
+
+        function loadDeletedOriginalPoems() {
+            try {
+                const saved = localStorage.getItem(DELETED_POEMS_KEY);
+                if (saved) {
+                    deletedOriginalPoems = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.error('加载已删除诗词失败:', e);
+            }
+        }
+
+        function saveDeletedOriginalPoem(record) {
+            try {
+                deletedOriginalPoems.push(record);
+                localStorage.setItem(DELETED_POEMS_KEY, JSON.stringify(deletedOriginalPoems));
+            } catch (e) {
+                console.error('保存删除记录失败:', e);
+            }
+        }
+
+        function applyDeletedOriginalPoems() {
+            // 在初始化时移除已被删除的原始诗词
+            if (deletedOriginalPoems.length === 0) return;
+
+            for (let i = POETRY_DATABASE.length - 1; i >= 0; i--) {
+                if (deletedOriginalPoems.includes(POETRY_DATABASE[i])) {
+                    POETRY_DATABASE.splice(i, 1);
+                }
+            }
+            console.log(`已移除 ${deletedOriginalPoems.length} 首被删除的原始诗词`);
         }
 
         // 庆祝动画
@@ -1109,6 +1661,382 @@
                 return;
             }
         }, { passive: false });
+
+        // ==================== 菜单和诗词管理功能 ====================
+        
+        const CUSTOM_POEMS_KEY = 'xunhualing_custom_poems';
+        let customPoems = [];
+
+        // 加载本地存储的自定义诗词
+        function loadCustomPoems() {
+            try {
+                const saved = localStorage.getItem(CUSTOM_POEMS_KEY);
+                if (saved) {
+                    customPoems = JSON.parse(saved);
+                    // 将自定义诗词合并到主数据库
+                    if (Array.isArray(customPoems) && customPoems.length > 0) {
+                        POETRY_DATABASE.push(...customPoems);
+                        console.log(`已加载 ${customPoems.length} 首自定义诗词`);
+                    }
+                }
+            } catch (e) {
+                console.error('加载自定义诗词失败:', e);
+            }
+        }
+
+        // 保存自定义诗词到本地存储
+        function saveCustomPoems() {
+            try {
+                localStorage.setItem(CUSTOM_POEMS_KEY, JSON.stringify(customPoems));
+            } catch (e) {
+                console.error('保存自定义诗词失败:', e);
+            }
+        }
+
+        // 切换菜单显示
+        function toggleMenu() {
+            const menu = document.getElementById('dropdownMenu');
+            updateHintMenuItem();
+            menu.classList.toggle('show');
+        }
+
+        // 更新提示菜单项状态
+        function updateHintMenuItem() {
+            const hintItem = document.getElementById('hintMenuItem');
+            const correctChars = getCorrectGuessedChars();
+            
+            if (correctChars.length === 0) {
+                hintItem.classList.add('disabled');
+                hintItem.title = '请先猜中至少一个字（绿色或橙色）';
+            } else {
+                hintItem.classList.remove('disabled');
+                hintItem.title = `已猜中 ${correctChars.length} 个字，点击查看提示`;
+            }
+        }
+
+        // 获取所有有价值的猜测字（绿色正确位置 + 橙色存在但位置错，不重复）
+        function getCorrectGuessedChars() {
+            const valuableBoxes = document.querySelectorAll('.char-box.correct, .char-box.present');
+            const chars = new Set();
+            valuableBoxes.forEach(box => {
+                if (box.textContent) {
+                    chars.add(box.textContent);
+                }
+            });
+            return Array.from(chars);
+        }
+
+        // 显示提示
+        function showHint() {
+            const correctChars = getCorrectGuessedChars();
+            
+            if (correctChars.length === 0) {
+                showMessage('请先猜中至少一个字才能获取提示', 'error');
+                return;
+            }
+
+            // 确定当前游戏的格式（5,5 或 7,7）
+            const currentFormat = gameState.type === 'wuyan' ? '5,5' : '7,7';
+
+            // 从数据库中找包含这些字且格式匹配的诗词
+            const candidates = [];
+            for (const record of POETRY_DATABASE) {
+                const parts = record.split('\t');
+                if (parts.length >= 6) {
+                    const sentence = parts[1];
+                    const wordCount = parts[5]; // 格式如 "5,5" 或 "7,7"
+                    
+                    // 检查格式是否匹配
+                    if (wordCount !== currentFormat) continue;
+                    
+                    // 检查是否包含任意一个猜中的字
+                    const hasMatch = correctChars.some(char => sentence.includes(char));
+                    if (hasMatch) {
+                        candidates.push({
+                            record: record,
+                            title: parts[0].trim(),
+                            sentence: sentence,
+                            author: parts[2] || '未知',
+                            dynasty: parts[3] || '未知',
+                            wordCount: wordCount,
+                            matchedChars: correctChars.filter(char => sentence.includes(char))
+                        });
+                    }
+                }
+            }
+
+            if (candidates.length === 0) {
+                const formatText = currentFormat === '5,5' ? '五言' : '七言';
+                showMessage(`未找到包含这些字的其他${formatText}诗词`, 'error');
+                return;
+            }
+
+            // 随机选择一条
+            const hint = candidates[Math.floor(Math.random() * candidates.length)];
+            
+            // 显示提示模态框
+            document.getElementById('hintPoemInfo').innerHTML = 
+                `${hint.dynasty} · ${hint.author}<br>《${hint.title}》`;
+            document.getElementById('hintPoemSentence').textContent = hint.sentence;
+            document.getElementById('hintMatchedChars').textContent = 
+                `包含你猜对的字：${hint.matchedChars.join('、')}`;
+            
+            document.getElementById('hintModal').classList.add('show');
+            document.getElementById('dropdownMenu').classList.remove('show');
+        }
+
+        // 关闭提示模态框
+        function closeHintModal() {
+            document.getElementById('hintModal').classList.remove('show');
+        }
+
+        // 点击外部关闭菜单
+        document.addEventListener('click', function(e) {
+            const container = document.querySelector('.menu-container');
+            if (!container.contains(e.target)) {
+                document.getElementById('dropdownMenu').classList.remove('show');
+            }
+        });
+
+        // 打开添加诗词模态框
+        function openAddPoemModal() {
+            document.getElementById('addPoemModal').classList.add('show');
+            document.getElementById('dropdownMenu').classList.remove('show');
+            // 重置表单
+            document.getElementById('addPoemForm').reset();
+            document.getElementById('addSuccessSection').classList.remove('show');
+            document.getElementById('addModalButtons').style.display = 'flex';
+        }
+
+        // 关闭添加诗词模态框
+        function closeAddPoemModal() {
+            document.getElementById('addPoemModal').classList.remove('show');
+            document.getElementById('addSuccessSection').classList.remove('show');
+        }
+
+        // 打开导出模态框
+        function openExportModal() {
+            document.getElementById('exportModal').classList.add('show');
+            document.getElementById('dropdownMenu').classList.remove('show');
+            updateExportCounts();
+            generateFullExport();
+        }
+
+        // 关闭导出模态框
+        function closeExportModal() {
+            document.getElementById('exportModal').classList.remove('show');
+        }
+
+        // 更新统计数量
+        function updateExportCounts() {
+            document.getElementById('totalPoemCount').textContent = POETRY_DATABASE.length;
+            document.getElementById('customPoemCount').textContent = customPoems.length;
+            document.getElementById('deletedPoemCount').textContent = deletedOriginalPoems.length;
+        }
+
+        // 解析诗词格式
+        function parsePoemFormat(sentence, format) {
+            // 清理标点，只保留汉字
+            const cleanSentence = sentence.replace(/[^\u4e00-\u9fa5]/g, '');
+            
+            if (format === 'auto') {
+                // 尝试分割成两句
+                const commonPunctuations = ['，', '。', '；', ',', '.', ';'];
+                let parts = [];
+                
+                for (const punct of commonPunctuations) {
+                    if (sentence.includes(punct)) {
+                        parts = sentence.split(punct).filter(p => p.trim());
+                        if (parts.length >= 2) break;
+                    }
+                }
+                
+                if (parts.length < 2) {
+                    // 没有标点，尝试按字数平均分割
+                    const half = Math.floor(cleanSentence.length / 2);
+                    parts = [
+                        cleanSentence.slice(0, half),
+                        cleanSentence.slice(half)
+                    ];
+                }
+                
+                const firstPart = parts[0].replace(/[^\u4e00-\u9fa5]/g, '');
+                const secondPart = parts[1]?.replace(/[^\u4e00-\u9fa5]/g, '') || '';
+                
+                return {
+                    lineCount: 2,
+                    wordCount: `${firstPart.length},${secondPart.length}`,
+                    isValid: firstPart.length === secondPart.length && (firstPart.length === 5 || firstPart.length === 7)
+                };
+            } else {
+                const [len1, len2] = format.split(',').map(Number);
+                return {
+                    lineCount: 2,
+                    wordCount: format,
+                    isValid: cleanSentence.length === (len1 + len2)
+                };
+            }
+        }
+
+        // 检查诗词是否已存在（基于纯汉字内容比较，忽略标点和空格）
+        function isPoemExists(sentence) {
+            const newPoemChars = sentence.replace(/[^\u4e00-\u9fa5]/g, '');
+            
+            for (const record of POETRY_DATABASE) {
+                const parts = record.split('\t');
+                if (parts.length >= 2) {
+                    const existingChars = parts[1].replace(/[^\u4e00-\u9fa5]/g, '');
+                    if (existingChars === newPoemChars) {
+                        return {
+                            exists: true,
+                            title: parts[0].trim(),
+                            author: parts[2] || '未知',
+                            dynasty: parts[3] || '未知'
+                        };
+                    }
+                }
+            }
+            return { exists: false };
+        }
+
+        // 添加诗词
+        function addPoem() {
+            const title = document.getElementById('poemTitle').value.trim();
+            const sentence = document.getElementById('poemSentence').value.trim();
+            const author = document.getElementById('poemAuthor').value.trim();
+            const dynasty = document.getElementById('poemDynasty').value;
+            const format = document.getElementById('poemFormat').value;
+
+            // 验证必填项
+            if (!title || !sentence || !author) {
+                alert('请填写所有必填项');
+                return;
+            }
+
+            // 验证诗句包含汉字
+            if (!/[\u4e00-\u9fa5]/.test(sentence)) {
+                alert('诗句必须包含中文汉字');
+                return;
+            }
+
+            // 检查是否重复
+            const checkResult = isPoemExists(sentence);
+            if (checkResult.exists) {
+                alert(`⚠️ 该诗词已存在！\n\n《${checkResult.title}》\n${checkResult.dynasty} · ${checkResult.author}\n\n请勿重复添加。`);
+                return;
+            }
+
+            // 解析格式
+            const formatInfo = parsePoemFormat(sentence, format);
+            
+            if (!formatInfo.isValid && format === 'auto') {
+                alert('无法自动检测格式，请手动选择格式（5,5 或 7,7）');
+                return;
+            }
+
+            // 格式化标题（补齐到16个字符宽度）
+            const paddedTitle = title.padEnd(16, ' ');
+
+            // 构建数据记录
+            // 格式: 标题(16空格补齐)	诗句	作者	朝代	行数	字数
+            const poemRecord = `${paddedTitle}\t${sentence}\t${author}\t${dynasty}\t${formatInfo.lineCount}\t${formatInfo.wordCount}`;
+
+            // 添加到数据库
+            POETRY_DATABASE.push(poemRecord);
+            customPoems.push(poemRecord);
+            saveCustomPoems();
+
+            // 更新添加数量显示
+            updateExportCounts();
+
+            // 生成导出的代码
+            const exportCode = generateExportCode();
+            document.getElementById('exportCodeArea').value = exportCode;
+            
+            // 显示成功界面
+            document.getElementById('addSuccessSection').classList.add('show');
+            document.getElementById('addModalButtons').style.display = 'none';
+
+            showMessage(`✅ 已添加《${title}》`, 'success');
+        }
+
+        // 生成完整导出代码
+        function generateExportCode() {
+            const header = `// 诗词数据 - 自动生成的文件
+// 包含用户自定义添加的诗词
+// 总计: ${POETRY_DATABASE.length} 条数据
+// 格式: 标题\\t诗句\\t作者\\t朝代\\t行数\\t字数
+
+const POETRY_DATABASE = [`;
+
+            const footer = `];`;
+
+            const content = POETRY_DATABASE.map(line => `  "${line.replace(/"/g, '\\"')}"`).join(',\n');
+
+            return `${header}\n${content}\n${footer}`;
+        }
+
+        // 生成完整导出（用于导出模态框）
+        function generateFullExport() {
+            const code = generateExportCode();
+            document.getElementById('fullExportArea').value = code;
+        }
+
+        // 复制导出代码
+        function copyExportCode() {
+            const textarea = document.getElementById('exportCodeArea');
+            textarea.select();
+            document.execCommand('copy');
+            showMessage('📋 代码已复制到剪贴板', 'success');
+        }
+
+        // 复制完整导出代码
+        function copyFullExport() {
+            const textarea = document.getElementById('fullExportArea');
+            textarea.select();
+            document.execCommand('copy');
+            showMessage('📋 代码已复制到剪贴板', 'success');
+        }
+
+        // 下载诗词数据文件
+        function downloadPoetryData() {
+            const code = generateExportCode();
+            downloadFile(code, 'poetry_data.js', 'application/javascript');
+        }
+
+        // 下载完整诗词数据
+        function downloadFullPoetryData() {
+            const code = generateExportCode();
+            downloadFile(code, 'poetry_data.js', 'application/javascript');
+        }
+
+        // 通用下载文件函数
+        function downloadFile(content, filename, contentType) {
+            const blob = new Blob([content], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showMessage(`💾 已下载 ${filename}`, 'success');
+        }
+
+        // 点击模态框外部关闭
+        document.getElementById('addPoemModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAddPoemModal();
+        });
+        document.getElementById('exportModal').addEventListener('click', function(e) {
+            if (e.target === this) closeExportModal();
+        });
+        document.getElementById('deleteConfirmModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDeleteModal();
+        });
+        document.getElementById('hintModal').addEventListener('click', function(e) {
+            if (e.target === this) closeHintModal();
+        });
     </script>
 </body>
 </html>
