@@ -683,8 +683,27 @@
         }
 
         /* 模糊匹配 */
+        #fuzzyModal {
+            align-items: flex-start;
+            padding: 3vh 12px 12px;
+            overflow-y: auto;
+        }
+
+        #fuzzyModal .modal-content {
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100dvh - 24px);
+            padding: 20px;
+        }
+
+        #fuzzyModal .modal-title {
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
         .fuzzy-results {
-            max-height: 48vh;
+            flex: 1 1 auto;
+            min-height: 90px;
             overflow-y: auto;
             text-align: left;
             margin-top: 8px;
@@ -2051,11 +2070,38 @@
             const input = document.getElementById('fuzzyInput');
             input.value = '';
             renderFuzzyResults('');
-            setTimeout(() => input.focus(), 80);
+            fitFuzzyModal();
+            setTimeout(() => { input.focus(); fitFuzzyModal(); }, 80);
         }
 
         function closeFuzzyModal() {
-            document.getElementById('fuzzyModal').classList.remove('show');
+            const modal = document.getElementById('fuzzyModal');
+            modal.classList.remove('show');
+            modal.style.height = '';
+            modal.style.top = '';
+            const content = modal.querySelector('.modal-content');
+            if (content) content.style.maxHeight = '';
+        }
+
+        // 手机键盘弹出时，按可视视口高度贴顶收缩，避免输入框和结果被键盘挡住
+        function fitFuzzyModal() {
+            const modal = document.getElementById('fuzzyModal');
+            if (!modal || !modal.classList.contains('show')) return;
+            const content = modal.querySelector('.modal-content');
+            if (!content) return;
+
+            const vv = window.visualViewport;
+            const viewportH = Math.round(vv ? vv.height : window.innerHeight);
+            const offsetTop = Math.round(vv ? vv.offsetTop : 0);
+
+            modal.style.height = viewportH + 'px';
+            modal.style.top = offsetTop + 'px';
+            content.style.maxHeight = Math.max(240, viewportH - 24) + 'px';
+
+            const input = document.getElementById('fuzzyInput');
+            if (input && document.activeElement === input) {
+                input.scrollIntoView({ block: 'nearest' });
+            }
         }
 
         // 输入即搜（80ms 防抖）
@@ -2387,6 +2433,14 @@ const POETRY_DATABASE = [`;
         document.getElementById('fuzzyModal').addEventListener('click', function(e) {
             if (e.target === this) closeFuzzyModal();
         });
+
+        // 视口变化（含手机键盘弹出）时重新适配模糊匹配弹窗
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', fitFuzzyModal);
+            window.visualViewport.addEventListener('scroll', fitFuzzyModal);
+        }
+        window.addEventListener('resize', fitFuzzyModal);
+        window.addEventListener('orientationchange', () => setTimeout(fitFuzzyModal, 300));
     </script>
 </body>
 </html>
