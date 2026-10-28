@@ -610,6 +610,126 @@
             letter-spacing: 1px;
         }
 
+        /* 全文展示 */
+        .result-fulltext {
+            display: none;
+            text-align: left;
+            max-width: 560px;
+            margin: 14px auto 0;
+            padding: 14px 18px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.9;
+            letter-spacing: 1px;
+            white-space: pre-wrap;
+            max-height: 45vh;
+            overflow-y: auto;
+        }
+
+        .result-fulltext.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        /* 提示用字选择 */
+        .hint-char-picker {
+            display: none;
+            text-align: left;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--border);
+        }
+
+        .hint-char-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .hint-chip {
+            padding: 4px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(254, 202, 87, 0.4);
+            background: rgba(254, 202, 87, 0.1);
+            color: #feca57;
+            font-size: 16px;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .hint-chip:hover {
+            background: rgba(254, 202, 87, 0.25);
+        }
+
+        .hint-chip.active {
+            background: linear-gradient(135deg, #feca57, #f39c12);
+            border-color: transparent;
+            color: #1a1a2e;
+            font-weight: bold;
+        }
+
+        /* 模糊匹配 */
+        .fuzzy-results {
+            max-height: 48vh;
+            overflow-y: auto;
+            text-align: left;
+            margin-top: 8px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .fuzzy-item {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .fuzzy-item:last-child {
+            border-bottom: none;
+        }
+
+        .fz-sentence {
+            font-size: 16px;
+            color: var(--text-primary);
+            letter-spacing: 1px;
+            line-height: 1.6;
+        }
+
+        .fz-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            letter-spacing: 1px;
+        }
+
+        .fuzzy-item mark {
+            background: rgba(254, 202, 87, 0.35);
+            color: #ffe08a;
+            border-radius: 2px;
+            padding: 0 1px;
+        }
+
+        .fuzzy-empty {
+            color: var(--text-muted);
+            font-size: 13px;
+            padding: 18px 8px;
+            text-align: center;
+        }
+
         /* 图例说明 */
         .legend {
             display: flex;
@@ -796,6 +916,7 @@
         </button>
         <div class="dropdown-menu" id="dropdownMenu">
             <div class="dropdown-item" id="hintMenuItem" onclick="showHint()">💡 获取提示</div>
+            <div class="dropdown-item" onclick="openFuzzyModal()">🔍 模糊匹配</div>
             <div class="dropdown-item" onclick="openAddPoemModal()">➕ 添加诗词</div>
             <div class="dropdown-item" onclick="openExportModal()">📋 导出数据</div>
         </div>
@@ -908,12 +1029,29 @@
                 <p id="hintPoemSentence" style="color: var(--text-primary); font-size: 18px; letter-spacing: 2px; line-height: 1.6;"></p>
             </div>
             <p id="hintMatchedChars" style="color: #feca57; font-size: 13px; margin-bottom: 15px;"></p>
+            <div class="hint-char-picker" id="hintCharPicker">
+                <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 4px;">指定字（可多选，须同时出现）：</p>
+                <div class="hint-char-chips" id="hintCharChips"></div>
+            </div>
             <p style="color: var(--text-muted); font-size: 12px; margin-top: 10px;">
                 提示：这只是包含相同字的其他诗词，不一定是答案哦～
             </p>
             <div class="modal-buttons" style="margin-top: 15px;">
                 <button class="modal-btn modal-btn-secondary" onclick="closeHintModal()">关闭</button>
                 <button class="modal-btn modal-btn-primary" onclick="showHint()" style="background: linear-gradient(135deg, #feca57, #f39c12); color: #1a1a2e;">换一条</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模糊匹配模态框 -->
+    <div class="modal-overlay" id="fuzzyModal">
+        <div class="modal-content" style="max-width: 620px;">
+            <h2 class="modal-title" style="color: #64b5f6;">🔍 模糊匹配</h2>
+            <input type="text" class="form-input" id="fuzzyInput" placeholder="输入诗句、标题或作者；空格分隔可多条件" autocomplete="off" oninput="onFuzzyInput()">
+            <p class="form-hint" id="fuzzySummary" style="margin: 10px 0 6px;">输入即筛选，无需确认</p>
+            <div class="fuzzy-results" id="fuzzyResults"></div>
+            <div class="modal-buttons" style="margin-top: 15px;">
+                <button class="modal-btn modal-btn-secondary" onclick="closeFuzzyModal()">关闭</button>
             </div>
         </div>
     </div>
@@ -934,7 +1072,11 @@
             <div class="result-title" id="resultTitle"></div>
             <div class="result-poem" id="resultPoem"></div>
             <div class="result-author" id="resultAuthor"></div>
-            <button class="btn btn-danger" id="deletePoemBtn" onclick="confirmDeletePoem()" style="display: none; margin-top: 15px;">🗑️ 删除此诗词</button>
+            <div class="result-fulltext" id="resultFulltext"></div>
+            <div class="result-actions">
+                <button class="btn btn-secondary" id="showFulltextBtn" onclick="toggleFulltext()" style="display: none;">📜 显示全文</button>
+                <button class="btn btn-danger" id="deletePoemBtn" onclick="confirmDeletePoem()" style="display: none;">🗑️ 删除此诗词</button>
+            </div>
         </div>
 
         <!-- 数据加载提示 -->
@@ -980,6 +1122,7 @@
 
     <!-- 引入诗词数据 -->
     <script src="poetry_data.js"></script>
+    <script src="poetry_fulltext.js"></script>
 
     <script>
         // ==================== 静态版本 - 从外部 JS 文件加载诗词数据 ====================
@@ -993,7 +1136,8 @@
             currentRow: 0,
             maxAttempts: 30,
             isGameOver: false,
-            poemInfo: null
+            poemInfo: null,
+            hintChars: []
         };
 
         // 输入法组合状态标记
@@ -1149,6 +1293,7 @@
         function startGame() {
             gameState.currentRow = 0;
             gameState.isGameOver = false;
+            gameState.hintChars = [];
 
             // 更新类型显示
             const typeText = gameState.type === 'wuyan' ? '五言' : '七言';
@@ -1166,6 +1311,8 @@
 
             // 隐藏结果
             document.getElementById('resultSection').classList.remove('show');
+            document.getElementById('resultFulltext').classList.remove('show');
+            document.getElementById('showFulltextBtn').style.display = 'none';
             document.getElementById('submitBtn').disabled = false;
 
             // 清空消息
@@ -1530,7 +1677,42 @@
                 deleteBtn.style.display = 'inline-block';
             }
 
+            // 准备全文（一键展开）
+            const fulltextEl = document.getElementById('resultFulltext');
+            const fulltextBtn = document.getElementById('showFulltextBtn');
+            const fulltext = getPoemFulltext(gameState.poemInfo);
+            fulltextEl.classList.remove('show');
+            fulltextEl.textContent = fulltext || '';
+            if (fulltext && fulltextBtn) {
+                fulltextBtn.style.display = 'inline-block';
+                fulltextBtn.textContent = '📜 显示全文';
+            } else if (fulltextBtn) {
+                fulltextBtn.style.display = 'none';
+            }
+
             section.classList.add('show');
+        }
+
+        // 取当前篇目的全文；非内置篇目（自定义/已删）返回 null
+        function getPoemFulltext(poemInfo) {
+            if (!poemInfo || typeof POETRY_FULLTEXT === 'undefined') return null;
+            const title = (poemInfo.title || '').trim();
+            const author = (poemInfo.author || '').trim();
+            return POETRY_FULLTEXT[`${title}|${author}`]
+                || POETRY_FULLTEXT[title]
+                || null;
+        }
+
+        // 展开/收起全文
+        function toggleFulltext() {
+            const el = document.getElementById('resultFulltext');
+            const btn = document.getElementById('showFulltextBtn');
+            if (!el || !btn) return;
+            const showing = el.classList.toggle('show');
+            btn.textContent = showing ? '📜 收起全文' : '📜 显示全文';
+            if (showing) {
+                el.scrollTop = 0;
+            }
         }
 
         // 查看答案
@@ -1735,7 +1917,7 @@
                 hintItem.title = '请先猜中至少一个字（绿色或橙色）';
             } else {
                 hintItem.classList.remove('disabled');
-                hintItem.title = `已猜中 ${correctChars.length} 个字，点击查看提示`;
+                hintItem.title = `已猜中 ${correctChars.length} 个字，可指定用哪个字提示`;
             }
         }
 
@@ -1752,62 +1934,201 @@
         }
 
         // 显示提示
+        // 未指定字时：包含任意一个猜中的字即可，随机取一首
+        // 指定 1 个或多个字时：必须同时包含所有指定字
         function showHint() {
             const correctChars = getCorrectGuessedChars();
-            
+
             if (correctChars.length === 0) {
                 showMessage('请先猜中至少一个字才能获取提示', 'error');
                 return;
             }
 
+            // 丢弃已不在猜中列表里的选择（例如重新开局）
+            gameState.hintChars = (gameState.hintChars || []).filter(c => correctChars.includes(c));
+            const chosen = gameState.hintChars;
+            const requireAll = chosen.length > 0;
+            const targetChars = requireAll ? chosen : correctChars;
+
             // 确定当前游戏的格式（5,5 或 7,7）
             const currentFormat = gameState.type === 'wuyan' ? '5,5' : '7,7';
+            const answerRaw = gameState.answer || '';
 
-            // 从数据库中找包含这些字且格式匹配的诗词
+            // 找符合条件的诗词：格式匹配、非本局答案、且包含目标字
             const candidates = [];
             for (const record of POETRY_DATABASE) {
                 const parts = record.split('\t');
-                if (parts.length >= 6) {
-                    const sentence = parts[1];
-                    const wordCount = parts[5]; // 格式如 "5,5" 或 "7,7"
-                    
-                    // 检查格式是否匹配
-                    if (wordCount !== currentFormat) continue;
-                    
-                    // 检查是否包含任意一个猜中的字
-                    const hasMatch = correctChars.some(char => sentence.includes(char));
-                    if (hasMatch) {
-                        candidates.push({
-                            record: record,
-                            title: parts[0].trim(),
-                            sentence: sentence,
-                            author: parts[2] || '未知',
-                            dynasty: parts[3] || '未知',
-                            wordCount: wordCount,
-                            matchedChars: correctChars.filter(char => sentence.includes(char))
-                        });
-                    }
-                }
+                if (parts.length < 6) continue;
+                const sentence = parts[1];
+                const wordCount = parts[5]; // 格式如 "5,5" 或 "7,7"
+
+                if (wordCount !== currentFormat) continue;
+                // 不要把答案本身当提示
+                if (sentence.replace(/[^\u4e00-\u9fa5]/g, '') === answerRaw) continue;
+
+                const matched = targetChars.filter(c => sentence.includes(c));
+                if (requireAll ? matched.length !== chosen.length : matched.length === 0) continue;
+
+                candidates.push({
+                    record: record,
+                    title: parts[0].trim(),
+                    sentence: sentence,
+                    author: parts[2] || '未知',
+                    dynasty: parts[3] || '未知',
+                    wordCount: wordCount,
+                    matchedChars: matched
+                });
             }
 
             if (candidates.length === 0) {
                 const formatText = currentFormat === '5,5' ? '五言' : '七言';
-                showMessage(`未找到包含这些字的其他${formatText}诗词`, 'error');
+                const scope = requireAll
+                    ? `同时含「${chosen.join('、')}」的`
+                    : '包含这些字的';
+                showMessage(`未找到${scope}其他${formatText}诗词`, 'error');
                 return;
             }
 
             // 随机选择一条
             const hint = candidates[Math.floor(Math.random() * candidates.length)];
-            
+
             // 显示提示模态框
             document.getElementById('hintPoemInfo').innerHTML = 
                 `${hint.dynasty} · ${hint.author}<br>《${hint.title}》`;
             document.getElementById('hintPoemSentence').textContent = hint.sentence;
             document.getElementById('hintMatchedChars').textContent = 
+                (requireAll ? `按指定字「${chosen.join('、')}」检索 · ` : '') +
                 `包含你猜对的字：${hint.matchedChars.join('、')}`;
-            
+
+            renderHintChips(correctChars, chosen);
+
             document.getElementById('hintModal').classList.add('show');
             document.getElementById('dropdownMenu').classList.remove('show');
+        }
+
+        // 渲染提示用字按钮：可多选，点「随机」清空选择
+        function renderHintChips(chars, active) {
+            const picker = document.getElementById('hintCharPicker');
+            const wrap = document.getElementById('hintCharChips');
+            if (!picker || !wrap) return;
+
+            wrap.innerHTML = '';
+            wrap.appendChild(makeHintChip('随机', active.length === 0, () => {
+                gameState.hintChars = [];
+                showHint();
+            }));
+            chars.forEach(ch => {
+                const on = active.includes(ch);
+                wrap.appendChild(makeHintChip(ch, on, () => {
+                    const set = new Set(gameState.hintChars || []);
+                    if (set.has(ch)) {
+                        set.delete(ch);
+                    } else {
+                        set.add(ch);
+                    }
+                    gameState.hintChars = Array.from(set);
+                    showHint();
+                }));
+            });
+            picker.style.display = 'block';
+        }
+
+        function makeHintChip(label, isActive, onClick) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'hint-chip' + (isActive ? ' active' : '');
+            btn.textContent = label;
+            btn.onclick = onClick;
+            return btn;
+        }
+
+        // ==================== 模糊匹配 ====================
+        let fuzzyTimer = null;
+
+        function openFuzzyModal() {
+            document.getElementById('dropdownMenu').classList.remove('show');
+            document.getElementById('fuzzyModal').classList.add('show');
+            const input = document.getElementById('fuzzyInput');
+            input.value = '';
+            renderFuzzyResults('');
+            setTimeout(() => input.focus(), 80);
+        }
+
+        function closeFuzzyModal() {
+            document.getElementById('fuzzyModal').classList.remove('show');
+        }
+
+        // 输入即搜（80ms 防抖）
+        function onFuzzyInput() {
+            clearTimeout(fuzzyTimer);
+            fuzzyTimer = setTimeout(() => {
+                renderFuzzyResults(document.getElementById('fuzzyInput').value);
+            }, 80);
+        }
+
+        function normalizeQuery(s) {
+            return (s || '').replace(/\s+/g, '').toLowerCase();
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => (
+                { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+            ));
+        }
+
+        function highlightKeywords(text, keywords) {
+            const escaped = escapeHtml(text);
+            const pattern = keywords
+                .map(k => escapeHtml(normalizeQuery(k)).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+                .filter(Boolean)
+                .join('|');
+            if (!pattern) return escaped;
+            return escaped.replace(new RegExp(`(${pattern})`, 'gi'), '<mark>$1</mark>');
+        }
+
+        function renderFuzzyResults(raw) {
+            const box = document.getElementById('fuzzyResults');
+            const summary = document.getElementById('fuzzySummary');
+            if (!box || !summary) return;
+
+            const keywords = (raw || '').trim().split(/\s+/).filter(Boolean);
+            if (keywords.length === 0) {
+                box.innerHTML = '';
+                summary.textContent = '输入即筛选，无需确认';
+                return;
+            }
+
+            const results = [];
+            for (const record of POETRY_DATABASE) {
+                const parts = record.split('\t');
+                if (parts.length < 6) continue;
+                const title = parts[0];
+                const sentence = parts[1];
+                const author = parts[2];
+                const dynasty = parts[3];
+                const wordCount = parts[5];
+                const hay = normalizeQuery(`${title} ${sentence} ${author} ${dynasty}`);
+                if (!keywords.every(k => hay.includes(normalizeQuery(k)))) continue;
+                results.push({ title: title.trim(), sentence, author, dynasty, wordCount });
+            }
+
+            const condText = keywords.length > 1 ? `（条件：${keywords.join(' + ')}）` : '';
+            summary.textContent = `匹配到 ${results.length} 条${condText}`;
+
+            if (results.length === 0) {
+                box.innerHTML = '<div class="fuzzy-empty">没有匹配结果，换个关键词试试</div>';
+                return;
+            }
+
+            const LIMIT = 80;
+            box.innerHTML = results.slice(0, LIMIT).map(r => `
+                <div class="fuzzy-item">
+                    <div class="fz-sentence">${highlightKeywords(r.sentence, keywords)}</div>
+                    <div class="fz-meta">${escapeHtml(r.dynasty)} · ${escapeHtml(r.author)}《${highlightKeywords(r.title, keywords)}》 · ${r.wordCount === '5,5' ? '五言' : '七言'}</div>
+                </div>`).join('')
+                + (results.length > LIMIT
+                    ? `<div class="fuzzy-empty">共 ${results.length} 条，仅显示前 ${LIMIT} 条，请补充关键词</div>`
+                    : '');
         }
 
         // 关闭提示模态框
@@ -2061,6 +2382,10 @@ const POETRY_DATABASE = [`;
         });
         document.getElementById('hintModal').addEventListener('click', function(e) {
             if (e.target === this) closeHintModal();
+        });
+
+        document.getElementById('fuzzyModal').addEventListener('click', function(e) {
+            if (e.target === this) closeFuzzyModal();
         });
     </script>
 </body>
