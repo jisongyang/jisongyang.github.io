@@ -1461,7 +1461,24 @@ function openSettings(){
 }
 
 /* ============================== 启动 ============================== */
+/**
+ * 一次性 token 导入：打开 …/outfit/#t=<token> 时写入本地并立刻从地址栏抹掉。
+ * 只在本机生效，token 不会出现在页面源码里。
+ */
+function importTokenFromHash(){
+  const m = location.hash.match(/[#&]t=([^&]+)/);
+  if(!m) return false;
+  try{
+    localStorage.setItem(TOKEN_KEY, decodeURIComponent(m[1]));
+    history.replaceState(null, '', location.pathname + location.search);
+    STATE.token = localStorage.getItem(TOKEN_KEY) || '';
+    return true;
+  }catch(e){ return false; }
+}
+
 (async function boot(){
+  const tokenImported = importTokenFromHash();
+
   try{
     db = await openDB();
   }catch(e){
@@ -1473,6 +1490,7 @@ function openSettings(){
 
   bind();
   await refresh();
+  if(tokenImported) setTimeout(() => toast('Token 已保存到本机'), 500);
 
   // 空状态：悄悄探测远端有没有备份，有就把「恢复」点亮
   if(!ITEMS.length){
