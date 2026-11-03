@@ -365,6 +365,20 @@ button:disabled{opacity:.4}
 </div>
 
 <div id="busy"><div class="spin"></div><div class="txt" id="busy-txt">处理中…</div></div>
+
+<!-- ============ 确认弹窗（替代原生 confirm，手机上更可靠） ============ -->
+<div class="sheet" id="ask" style="z-index:80">
+  <div class="sheet-body">
+    <div class="grab"></div>
+    <div class="sheet-head"><h3 id="ask-title">确认</h3></div>
+    <div class="hint" id="ask-text" style="font-size:13px;line-height:1.75;color:var(--fg);white-space:pre-line"></div>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="ask-no">取消</button>
+      <button class="btn primary" id="ask-yes">确定</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -434,6 +448,21 @@ function busy(on, text){
   }
 }
 function busyText(text){ $('#busy-txt').textContent = text; }
+
+let askResolve = null;
+function ask(title, text, okLabel){
+  $('#ask-title').textContent = title;
+  $('#ask-text').textContent = text;
+  $('#ask-yes').textContent = okLabel || '确定';
+  openSheet('ask');
+  return new Promise(res => { askResolve = res; });
+}
+function askDone(v){
+  closeSheet('ask');
+  const r = askResolve;
+  askResolve = null;
+  if(r) r(v);
+}
 
 function openSheet(id){ $('#'+id).classList.add('on'); }
 function closeSheet(id){
@@ -1226,7 +1255,7 @@ async function restore(){
     ? '本地有 ' + localOnly + ' 件单品。恢复会用备份覆盖它们，\n未备份的改动将丢失。继续吗？'
     : '恢复到本机？共 ' + manifest.items.length + ' 件。';
 
-  if(!confirm(msg)) return;
+  if(!await ask('从备份恢复', msg, '覆盖并恢复')) return;
 
   busy(true, '准备中…');
   try{
@@ -1372,8 +1401,9 @@ async function openManage(){
     del.className = 'del'; del.textContent = '✕';
     del.style.cssText = 'color:var(--danger);font-size:14px;padding:6px 8px';
     del.onclick = async () => {
-      if(!confirm('删除 #' + it.id + '？下次备份时仓库里也会删掉。')) return;
+      if(!await ask('删除这件', '确定删除 #' + it.id + '？本机会立即移除，下次备份时仓库里这个文件也会被删掉。', '删除')) return;
       await delItem(it.id);
+      toast('已删除 #' + it.id);
       const idx = FAVS.findIndex(f => f.t === it.id || f.b === it.id);
       if(idx >= 0){ FAVS = FAVS.filter(f => f.t !== it.id && f.b !== it.id); await kvSet('favorites', FAVS); }
       row.remove();
@@ -1413,6 +1443,15 @@ function bind(){
   $$('[data-edit]').forEach(b => {
     b.onclick = () => {
       const cat = b.dataset.edit;
+      // 以实际滚动位置为准，避免刚滑完就点点到上一件
+      const rail = $('#rail-' + cat);
+      const card = rail.querySelector('.card');
+      const w = card ? card.getBoundingClientRect().width : 0;
+      if(w && TRACK_LIST[cat].length){
+        const idx = Math.max(0, Math.min(TRACK_LIST[cat].length - 1, Math.round(rail.scrollLeft / w)));
+        TRACK_IDX[cat] = idx;
+        updateBadge(cat);
+      }
       const it = curItem(cat);
       if(!it){ toast('这一栏还没有单品'); return; }
       openEditor(Object.assign({}, it), {});
@@ -1420,9 +1459,12 @@ function bind(){
   });
 
   $$('[data-close]').forEach(b => { b.onclick = () => closeSheet(b.dataset.close); });
+  $('#ask-yes').onclick = () => askDone(true);
+  $('#ask-no').onclick  = () => askDone(false);
   $$('.sheet').forEach(s => {
     s.addEventListener('click', e => {
       if(e.target !== s) return;
+      if(s.id === 'ask'){ askDone(false); return; }
       // 分类过程中点空白处 = 跳过这张
       if(s.id === 'editor' && ED.opts && ED.opts.queue) closeEditor(true);
       else closeSheet(s.id);
@@ -1437,7 +1479,7 @@ function bind(){
   $('#ed-del').onclick = async () => {
     const it = ED.item;
     if(!it) return;
-    if(!confirm('删除 #' + it.id + '？下次备份时仓库里也会删掉。')) return;
+    if(!await ask('删除这件', '确定删除 #' + it.id + '？本机会立即移除，下次备份时仓库里这个文件也会被删掉。', '删除')) return;
     await delItem(it.id);
     FAVS = FAVS.filter(f => f.t !== it.id && f.b !== it.id);
     await kvSet('favorites', FAVS);
@@ -1467,7 +1509,7 @@ function bind(){
     nextInQueue();
   };
   $('#s-clear').onclick = async () => {
-    if(!confirm('清空本机所有照片和标签？\n（仓库里的备份不受影响，可以再恢复）')) return;
+    if(!await ask('清空本地数据', '本机所有照片和标签都会被删除。仓库里的备份不受影响，之后可以再恢复。', '清空')) return;
     dropAllURLs();
     await clearAll();
     await kvSet('cur', { top:null, bottom:null });
