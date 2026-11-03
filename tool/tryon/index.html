@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e0e10">
+<title>试衣实验 · warp</title>
+<style>
+:root{
+  --bg:#0e0e10; --panel:#17171a; --panel2:#1e1e22; --line:#2b2b30;
+  --fg:#f2f2f3; --dim:#8b8b93; --dim2:#5f5f68;
+  --accent:#d9b46a; --danger:#c8553d;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--fg);
+  font:15px/1.45 -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  display:flex;flex-direction:column;height:100vh;height:100dvh;
+  padding-top:var(--safe-t);padding-bottom:var(--safe-b);overscroll-behavior:none;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+
+#bar{flex:0 0 auto;height:50px;display:flex;align-items:center;gap:4px;padding:0 8px 0 14px;
+  border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141416,#0e0e10)}
+#bar h1{font-size:15px;font-weight:600;letter-spacing:.05em}
+#bar .tag{font-size:10px;color:var(--accent);border:1px solid #4a3d22;border-radius:5px;padding:1px 5px;margin-left:6px}
+#bar .grow{flex:1}
+.icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--dim)}
+.icon:active{background:var(--panel2)}
+
+#stageWrap{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;padding:8px}
+#stage{display:block;max-width:100%;max-height:100%;border-radius:10px;background:#141416;
+  box-shadow:0 8px 40px rgba(0,0,0,.45)}
+#hint{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;text-align:center;font-size:11.5px;
+  color:var(--dim);pointer-events:none;background:rgba(14,14,16,.72);backdrop-filter:blur(6px);
+  padding:4px 12px;border-radius:20px;border:1px solid var(--line);white-space:nowrap;max-width:92%}
+
+#dock{flex:0 0 auto;display:flex;gap:8px;padding:8px 10px 10px;border-top:1px solid var(--line)}
+.slot{
+  flex:1;min-width:0;height:72px;border-radius:12px;border:1px solid var(--line);
+  background:var(--panel);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;position:relative;overflow:hidden;
+}
+.slot:active{background:var(--panel2)}
+.slot .nm{font-size:11px;color:var(--dim);letter-spacing:.06em}
+.slot .st{font-size:10px;color:var(--dim2)}
+.slot.on .st{color:var(--accent)}
+.slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:.55}
+.slot .lbl{position:relative;z-index:1;text-shadow:0 1px 3px #000}
+.slot.empty{border-style:dashed}
+
+/* sheet */
+.sheet{position:fixed;inset:0;z-index:50;display:none;align-items:flex-end;background:rgba(0,0,0,.6)}
+.sheet.on{display:flex}
+.sheet-body{width:100%;max-height:94%;overflow-y:auto;background:var(--panel);
+  border-radius:18px 18px 0 0;padding:14px 16px calc(16px + var(--safe-b));border-top:1px solid var(--line);
+  animation:up .2s ease-out}
+@keyframes up{from{transform:translateY(20px);opacity:.7}to{transform:none;opacity:1}}
+.grab{width:36px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px}
+.sh-head{display:flex;align-items:center;margin-bottom:10px}
+.sh-head h3{font-size:15px;font-weight:600;flex:1}
+.sh-head .close{font-size:13px;color:var(--dim);padding:6px}
+
+.edcv{display:block;margin:0 auto;max-width:100%;border-radius:10px;background:#101012;touch-action:none}
+.checker{background-image:linear-gradient(45deg,#1a1a1d 25%,transparent 25%),linear-gradient(-45deg,#1a1a1d 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#1a1a1d 75%),linear-gradient(-45deg,transparent 75%,#1a1a1d 75%);
+  background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}
+
+.row{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;height:44px;border-radius:11px;border:1px solid var(--line);background:var(--panel2);
+  display:flex;align-items:center;justify-content:center;font-size:14px}
+.btn:active{opacity:.8}
+.btn.primary{background:var(--accent);color:#17140c;border-color:var(--accent);font-weight:600}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.4}
+
+.row-label{font-size:11.5px;color:var(--dim);letter-spacing:.1em;margin:14px 0 6px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.hint{font-size:11.5px;color:var(--dim2);line-height:1.75;margin-top:8px}
+.hint b{color:var(--dim)}
+.tips{font-size:12.5px;color:var(--dim);line-height:1.85}
+.tips b{color:var(--fg);font-weight:500}
+.tips li{margin:5px 0 5px 16px}
+
+#toast{position:fixed;left:50%;bottom:96px;transform:translate(-50%,10px);background:#26262b;
+  border:1px solid var(--line);border-radius:10px;padding:9px 16px;font-size:13px;z-index:80;
+  opacity:0;pointer-events:none;transition:.18s;max-width:86vw;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <h1>试衣实验</h1><span class="tag">warp</span>
+  <div class="grow"></div>
+  <button class="icon" id="btn-person" title="人像">👤</button>
+  <button class="icon" id="btn-body" title="标定人体">✚</button>
+  <button class="icon" id="btn-save" title="导出图片">↓</button>
+  <button class="icon" id="btn-help" title="说明">?</button>
+</div>
+
+<div id="stageWrap">
+  <canvas id="stage"></canvas>
+  <div id="hint">先点 👤 上传一张正面全身照</div>
+</div>
+
+<div id="dock">
+  <button class="slot empty" data-slot="inner"><span class="lbl nm">内衬</span><span class="lbl st">未设置</span></button>
+  <button class="slot empty" data-slot="outer"><span class="lbl nm">外套</span><span class="lbl st">未设置</span></button>
+  <button class="slot empty" data-slot="bottom"><span class="lbl nm">下装</span><span class="lbl st">未设置</span></button>
+</div>
+
+<input type="file" id="picker" accept="image/*" hidden>
+<input type="file" id="picker-person" accept="image/*" hidden>
+
+<!-- 衣服编辑 -->
+<div class="sheet" id="sheet-garment">
+  <div class="sheet-body">
+    <div class="grab"></div>
+    <div class="sh-head"><h3 id="g-title">内衬</h3><button class="close" data-close="sheet-garment">关闭</button></div>
+    <canvas id="g-canvas" class="edcv checker"></canvas>
+    <div class="row-label">去背景强度 <span id="g-tolv" style="color:var(--fg)">46</span></div>
+    <input type="range" id="g-tol" min="0" max="120" value="46">
+    <div class="row">
+      <button class="btn ghost" id="g-upload">换图</button>
+      <button class="btn ghost" id="g-auto">重置锚点</button>
+    </div>
+    <div class="row">
+      <button class="btn ghost" id="g-remove" style="color:var(--danger)">移除这件</button>
+      <button class="btn primary" id="g-done">完成</button>
+    </div>
+    <div class="hint">拖动 6 个圆点到衣服的对应位置：<b>左/右肩</b>、<b>左/右腰</b>、<b>左/右下摆</b>。下装则是<b>腰、膝、脚踝</b>。</div>
+  </div>
+</div>
+
+<!-- 人体标定 -->
+<div class="sheet" id="sheet-body">
+  <div class="sheet-body">
+    <div class="grab"></div>
+    <div class="sh-head"><h3>标定人体关键点</h3><button class="close" data-close="sheet-body">关闭</button></div>
+    <canvas id="b-canvas" class="edcv"></canvas>
+    <div class="row">
+      <button class="btn ghost" id="b-reset">恢复默认</button>
+      <button class="btn primary" id="b-done">完成</button>
+    </div>
+    <div class="hint">把 10 个点拖到照片上对应的位置。没有上传人像时，会显示一个由这些点生成的灰色人体模型。</div>
+  </div>
+</div>
+
+<!-- 说明 -->
+<div class="sheet" id="sheet-help">
+  <div class="sheet-body">
+    <div class="grab"></div>
+    <div class="sh-head"><h3>这个页面在做什么</h3><button class="close" data-close="sheet-help">关闭</button></div>
+    <div class="tips">
+      用 <b>薄板样条（TPS）</b> 把平铺的衣服照片变形，贴到人像/人体模型上。
+      纯前端计算，不上传任何图片，全部在本地完成。
+      <br><br>
+      <b>拍衣服的要求（决定了成败）</b>
+      <ul>
+        <li>平铺俯拍，镜头与衣面平行，别倾斜</li>
+        <li>纯白或浅灰背景，<b>不要花纹、木地板、床单</b></li>
+        <li>袖子、下摆摊开；褶皱会被原样搬过去</li>
+        <li>外套要露出内衬的话，拍的时候就要<b>敞开</b>（拉链拉开）</li>
+        <li>散射光，不要闪光灯和硬阴影</li>
+      </ul>
+      <b>人像</b>
+      <ul>
+        <li>正面站立，双臂自然下垂、略微离开身体</li>
+        <li>全身入镜，相机高度在胸口左右</li>
+      </ul>
+      <b>已知局限</b>
+      <ul>
+        <li>没有人体分割，手臂不会挡住衣服</li>
+        <li>不做光影融合，衣服是“贴”上去的</li>
+        <li>为验证观感，不是最终形态</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+/* ===================== 常量 ===================== */
+const SLOT_ORDER = ['bottom','inner','outer'];         // 绘制顺序：先下装，再内衬，最后外套
+const SLOT_LABEL = { inner:'内衬', outer:'外套', bottom:'下装' };
+const SLOT_TPL   = { inner:'top', outer:'top', bottom:'bottom' };
+
+const TOP_KEYS    = ['shoulderL','shoulderR','waistL','waistR','hemL','hemR'];
+const BOTTOM_KEYS = ['waistL','waistR','kneeL','kneeR','ankleL','ankleR'];
+const BODY_KEYS   = ['shoulderL','shoulderR','waistL','waistR','hemL','hemR','kneeL','kneeR','ankleL','ankleR'];
+
+const KEY_LABEL = {
+  shoulderL:'左肩', shoulderR:'右肩', waistL:'左腰', waistR:'右腰',
+  hemL:'左下摆', hemR:'右下摆', kneeL:'左膝', kneeR:'右膝', ankleL:'左踝', ankleR:'右踝'
+};
+
+const BODY_DEFAULT = {
+  shoulderL:[0.340,0.215], shoulderR:[0.660,0.215],
+  waistL:[0.372,0.430],    waistR:[0.628,0.430],
+  hemL:[0.352,0.545],      hemR:[0.648,0.545],
+  kneeL:[0.398,0.735],     kneeR:[0.602,0.735],
+  ankleL:[0.410,0.930],    ankleR:[0.590,0.930]
+};
+
+const GARMENT_DEFAULT = {
+  top: {
+    shoulderL:[0.235,0.095], shoulderR:[0.765,0.095],
+    waistL:[0.300,0.560],    waistR:[0.700,0.560],
+    hemL:[0.265,0.930],      hemR:[0.735,0.930]
+  },
+  bottom: {
+    waistL:[0.300,0.060], waistR:[0.700,0.060],
+    kneeL:[0.330,0.560],  kneeR:[0.670,0.560],
+    ankleL:[0.300,0.930], ankleR:[0.700,0.930]
+  }
+};
+
+/* ===================== 工具 ===================== */
+const $ = s => document.querySelector(s);
+const clone = o => JSON.parse(JSON.stringify(o));
+
+let toastTimer = 0;
+function toast(m, ms){
+  const t = $('#toast'); t.textContent = m; t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('on'), ms || 2200);
+}
+function openSheet(id){ $('#'+id).classList.add('on'); }
+function closeSheet(id){ $('#'+id).classList.remove('on'); }
+
+/* ===================== 状态 ===================== */
+const state = {
+  body: clone(BODY_DEFAULT),
+  garments: {
+    inner:  { anchors: clone(GARMENT_DEFAULT.top),    tol: 46 },
+    outer:  { anchors: clone(GARMENT_DEFAULT.top),    tol: 46 },
+    bottom: { anchors: clone(GARMENT_DEFAULT.bottom), tol: 46 }
+  }
+};
+const IMG = { person:null, inner:null, outer:null, bottom:null };     // HTMLImageElement
+const CUT = { inner:null, outer:null, bottom:null };                   // 去背景后的 canvas
+
+function slotKeys(slot){ return SLOT_TPL[slot] === 'top' ? TOP_KEYS : BOTTOM_KEYS; }
+function slotKeysObj(slot){ return state.garments[slot].anchors; }
+
+/* ===================== IndexedDB ===================== */
+const DB_NAME='tryon', DB_VER=1;
+let db=null;
+function openDB(){
+  return new Promise((res,rej)=>{
+    const r = indexedDB.open(DB_NAME, DB_VER);
+    r.onupgradeneeded = ()=>{ if(!r.result.objectStoreNames.contains('kv')) r.result.createObjectStore('kv',{keyPath:'k'}); };
+    r.onsuccess = ()=>res(r.result);
+    r.onerror = ()=>rej(r.error);
+  });
+}
+function reqP(r){ return new Promise((res,rej)=>{ r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+const kvGet = k => reqP(db.transaction('kv').objectStore('kv').get(k)).then(r=>r?r.v:null);
+const kvSet = (k,v) => reqP(db.transaction('kv','readwrite').objectStore('kv').put({k,v}));
+
+/* ===================== 图片 ===================== */
+function loadImageFromBlob(blob){
+  return new Promise((res,rej)=>{
+    const u = URL.createObjectURL(blob);
+    const im = new Image();
+    im.onload = ()=>{ URL.revokeObjectURL(u); res(im); };
+    im.onerror = ()=>{ URL.revokeObjectURL(u); rej(new Error('图片读取失败')); };
+    im.src = u;
+  });
+}
+function fitBlob(blob, maxEdge){
+  return loadImageFromBlob(blob).then(im=>{
+    const k = Math.min(1, maxEdge / Math.max(im.naturalWidth, im.naturalHeight));
+    if(k >= 1) return im;
+    const c = document.createElement('canvas');
+    c.width = Math.round(im.naturalWidth * k);
+    c.height = Math.round(im.naturalHeight * k);
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    return c;
+  });
+}
+
+/* ===================== 去背景（边缘泛洪） ===================== */
+function cutout(src, tol){
+  const w = src.width, h = src.height;
+  const c = document.createElement('canvas'); c.width=w; c.height=h;
+  const x = c.getContext('2d', { willReadFrequently:true });
+  x.drawImage(src, 0, 0);
+  const img = x.getImageData(0,0,w,h);
+  const d = img.data;
+
+  // 背景色 = 四边像素均值
+  let br=0,bg=0,bb=0,n=0;
+  const sample = (px,py)=>{ const i=(py*w+px)*4; br+=d[i];bg+=d[i+1];bb+=d[i+2];n++; };
+  for(let i=0;i<w;i+=2){ sample(i,0); sample(i,h-1); }
+  for(let j=0;j<h;j+=2){ sample(0,j); sample(w-1,j); }
+  br/=n; bg/=n; bb/=n;
+
+  const T = tol*tol*3;
+  const seen = new Uint8Array(w*h);
+  const stack = [];
+  const push = i => { if(!seen[i]){ seen[i]=1; stack.push(i); } };
+  for(let i=0;i<w;i++){ push(i); push((h-1)*w+i); }
+  for(let j=0;j<h;j++){ push(j*w); push(j*w+w-1); }
+
+  while(stack.length){
+    const p = stack.pop();
+    const i4 = p*4;
+    const dr=d[i4]-br, dg=d[i4+1]-bg, dbl=d[i4+2]-bb;
+    if(dr*dr+dg*dg+dbl*dbl > T) continue;
+    d[i4+3] = 0;
+    const px = p % w, py = (p - px) / w;
+    if(px>0) push(p-1);
+    if(px<w-1) push(p+1);
+    if(py>0) push(p-w);
+    if(py<h-1) push(p+w);
+  }
+  x.putImageData(img,0,0);
+  return c;
+}
+
+/* ===================== TPS ===================== */
+function gauss(A, b){
+  const n = b.length;
+  const M = A.map((row,i)=>{ const r = new Float64Array(n+1); for(let j=0;j<n;j++) r[j]=row[j]; r[n]=b[i]; return r; });
+  for(let col=0; col<n; col++){
+    let piv = col;
+    for(let r=col+1;r<n;r++) if(Math.abs(M[r][col])>Math.abs(M[piv][col])) piv=r;
+    if(piv!==col){ const t=M[col]; M[col]=M[piv]; M[piv]=t; }
+    const pv = M[col][col];
+    if(Math.abs(pv) < 1e-12) continue;
+    for(let r=col+1;r<n;r++){
+      const f = M[r][col]/pv;
+      if(!f) continue;
+      for(let c2=col;c2<=n;c2++) M[r][c2] -= f*M[col][c2];
+    }
+  }
+  const x = new Float64Array(n);
+  for(let i=n-1;i>=0;i--){
+    let s = M[i][n];
+    for(let j=i+1;j<n;j++) s -= M[i][j]*x[j];
+    x[i] = Math.abs(M[i][i])<1e-12 ? 0 : s/M[i][i];
+  }
+  return x;
+}
+
+function tpsSolve(src, dst){
+  const n = src.length, N = n+3;
+  const K = r => r<=1e-9 ? 0 : r*r*Math.log(r);
+  const A = Array.from({length:N}, ()=>new Float64Array(N));
+  const bx = new Float64Array(N), by = new Float64Array(N);
+  for(let i=0;i<n;i++){
+    for(let j=0;j<n;j++){
+      A[i][j] = K(Math.hypot(src[i][0]-src[j][0], src[i][1]-src[j][1]));
+    }
+    A[i][n]=1; A[i][n+1]=src[i][0]; A[i][n+2]=src[i][1];
+    A[n][i]=1; A[n+1][i]=src[i][0]; A[n+2][i]=src[i][1];
+    bx[i]=dst[i][0]; by[i]=dst[i][1];
+  }
+  return { src, wx: gauss(A,bx), wy: gauss(A,by), n };
+}
+function tpsEval(m, x, y){
+  let u = m.wx[m.n] + m.wx[m.n+1]*x + m.wx[m.n+2]*y;
+  let v = m.wy[m.n] + m.wy[m.n+1]*x + m.wy[m.n+2]*y;
+  for(let i=0;i<m.n;i++){
+    const dx = x-m.src[i][0], dy = y-m.src[i][1];
+    const r = Math.hypot(dx,dy);
+    const k = r<=1e-9 ? 0 : r*r*Math.log(r);
+    u += m.wx[i]*k; v += m.wy[i]*k;
+  }
+  return [u,v];
+}
+
+/* ===================== 三角形贴图 ===================== */
+function drawTri(ctx, img, s0,s1,s2, d0,d1,d2){
+  // 目标三角形按重心放大约 4%，让相邻三角形互相压边，消除接缝
+  const cx=(d0[0]+d1[0]+d2[0])/3, cy=(d0[1]+d1[1]+d2[1])/3;
+  const S = 1.045;
+  const ex = p => [cx + (p[0]-cx)*S, cy + (p[1]-cy)*S];
+  const D0=ex(d0), D1=ex(d1), D2=ex(d2);
+
+  const x0=s0[0],y0=s0[1],x1=s1[0],y1=s1[1],x2=s2[0],y2=s2[1];
+  const den = (x1-x0)*(y2-y0) - (x2-x0)*(y1-y0);
+  if(Math.abs(den) < 1e-9) return;
+
+  const u0=D0[0],v0=D0[1],u1=D1[0],v1=D1[1],u2=D2[0],v2=D2[1];
+  const a = ((u1-u0)*(y2-y0) - (u2-u0)*(y1-y0)) / den;
+  const b = ((v1-v0)*(y2-y0) - (v2-v0)*(y1-y0)) / den;
+  const c = ((u2-u0)*(x1-x0) - (u1-u0)*(x2-x0)) / den;
+  const d = ((v2-v0)*(x1-x0) - (v1-v0)*(x2-x0)) / den;
+  const e = u0 - a*x0 - c*y0;
+  const f = v0 - b*x0 - d*y0;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(D0[0],D0[1]); ctx.lineTo(D1[0],D1[1]); ctx.lineTo(D2[0],D2[1]);
+  ctx.closePath(); ctx.clip();
+  ctx.setTransform(a,b,c,d,e,f);
+  ctx.drawImage(img, 0, 0);
+  ctx.restore();
+}
+
+function warpDraw(ctx, img, srcPts, dstPts, gridN){
+  const m = tpsSolve(srcPts, dstPts);
+  const W = img.width, H = img.height;
+  const sx = W/gridN, sy = H/gridN;
+  const V = new Array((gridN+1)*(gridN+1));
+  for(let j=0;j<=gridN;j++)
+    for(let i=0;i<=gridN;i++)
+      V[j*(gridN+1)+i] = tpsEval(m, i*sx, j*sy);
+
+  for(let j=0;j<gridN;j++){
+    for(let i=0;i<gridN;i++){
+      const A=V[j*(gridN+1)+i], B=V[j*(gridN+1)+i+1], C=V[(j+1)*(gridN+1)+i+1], D=V[(j+1)*(gridN+1)+i];
+      const ax=i*sx, ay=j*sy, bx2=(i+1)*sx, by2=(j+1)*sy;
+      drawTri(ctx, img, [ax,ay],[bx2,ay],[bx2,by2], A,B,C);
+      drawTri(ctx, img, [ax,ay],[bx2,by2],[ax,by2], A,C,D);
+    }
+  }
+}
+
+/* ===================== 舞台渲染 ===================== */
+const stage = $('#stage');
+let personRect = null;
+
+function sizeStage(){
+  const wrap = $('#stageWrap');
+  const maxW = wrap.clientWidth - 16;
+  const maxH = wrap.clientHeight - 16;
+  let w, h;
+  if(IMG.person){
+    const ar = IMG.person.width / IMG.person.height;
+    h = maxH; w = h*ar;
+    if(w > maxW){ w = maxW; h = w/ar; }
+  }else{
+    // 默认竖版比例
+    const ar = 3/4;
+    h = maxH; w = h*ar;
+    if(w > maxW){ w = maxW; h = w/ar; }
+  }
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  stage.style.width = w + 'px';
+  stage.style.height = h + 'px';
+  stage.width = Math.round(w*dpr);
+  stage.height = Math.round(h*dpr);
+  const ctx = stage.getContext('2d');
+  // 画布按设备像素绘制：TPS 贴图直接写 device 坐标，避免变换被覆盖
+  ctx.setTransform(1,0,0,1,0,0);
+  return { w: stage.width, h: stage.height, ctx };
+}
+
+function bodyPoint(key, rect){
+  const p = state.body[key];
+  return [rect.x + p[0]*rect.w, rect.y + p[1]*rect.h];
+}
+
+function drawMannequin(ctx, rect){
+  const P = k => bodyPoint(k, rect);
+  const sL=P('shoulderL'), sR=P('shoulderR'), wL=P('waistL'), wR=P('waistR');
+  const hL=P('hemL'), hR=P('hemR'), kL=P('kneeL'), kR=P('kneeR'), aL=P('ankleL'), aR=P('ankleR');
+
+  ctx.save();
+  ctx.fillStyle = '#cfc7bb';
+  ctx.strokeStyle = '#cfc7bb';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // 头
+  const headR = Math.abs(sR[0]-sL[0]) * 0.34;
+  const cx = (sL[0]+sR[0])/2;
+  const cy = (sL[1]+sR[1])/2 - headR*1.55;
+  ctx.beginPath(); ctx.arc(cx, cy, headR, 0, Math.PI*2); ctx.fill();
+
+  // 脖子
+  ctx.lineWidth = headR*0.5;
+  ctx.beginPath(); ctx.moveTo(cx, cy+headR*0.7);
+  ctx.lineTo(cx, (sL[1]+sR[1])/2); ctx.stroke();
+
+  // 躯干
+  ctx.beginPath();
+  ctx.moveTo(sL[0], sL[1]);
+  ctx.lineTo(sR[0], sR[1]);
+  ctx.lineTo(wR[0], wR[1]);
+  ctx.lineTo(hR[0], hR[1]);
+  ctx.lineTo(hL[0], hL[1]);
+  ctx.lineTo(wL[0], wL[1]);
+  ctx.closePath();
+  ctx.fill();
+
+  // 手臂
+  const armW = headR*0.62;
+  ctx.lineWidth = armW;
+  const armOut = (sR[0]-sL[0]) * 0.10;
+  for(const [s, w, sign] of [[sL,wL,-1],[sR,wR,1]]){
+    ctx.beginPath();
+    ctx.moveTo(s[0], s[1]);
+    ctx.quadraticCurveTo(s[0]+sign*armOut, (s[1]+w[1])/2, w[0]+sign*armOut*0.7, w[1]+ (hL[1]-wL[1])*0.55);
+    ctx.stroke();
+  }
+
+  // 腿
+  const legW = (hR[0]-hL[0]) * 0.30;
+  ctx.lineWidth = legW;
+  for(const [h, k, a] of [[hL,kL,aL],[hR,kR,aR]]){
+    ctx.beginPath();
+    ctx.moveTo(h[0], h[1]);
+    ctx.quadraticCurveTo(k[0], k[1], a[0], a[1]);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawScene(){
+  const { w, h, ctx } = sizeStage();
+  const rect = { x:0, y:0, w, h };
+  personRect = rect;
+
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = '#141416';
+  ctx.fillRect(0,0,w,h);
+
+  if(IMG.person){
+    ctx.drawImage(IMG.person, 0, 0, w, h);
+  }else{
+    drawMannequin(ctx, rect);
+  }
+
+  // 依次贴：下装 → 内衬 → 外套
+  for(const slot of SLOT_ORDER){
+    const cut = CUT[slot];
+    if(!cut) continue;
+    const keys = slotKeys(slot);
+    const src = keys.map(k => {
+      const a = slotKeysObj(slot)[k];
+      return [a[0]*cut.width, a[1]*cut.height];
+    });
+    const dst = keys.map(k => bodyPoint(k, rect));
+    warpDraw(ctx, cut, src, dst, 14);
+  }
+
+  updateSlots();
+}
+
+function updateSlots(){
+  document.querySelectorAll('.slot').forEach(el=>{
+    const slot = el.dataset.slot;
+    const has = !!IMG[slot];
+    el.classList.toggle('empty', !has);
+    el.querySelector('.st').textContent = has ? '已设置' : '未设置';
+
+  });
+  $('#hint').textContent = IMG.person
+    ? '拖动底部三格设置衣服 · 点 ✚ 标定人体'
+    : '先点 👤 上传一张正面全身照（或直接标定灰色模型）';
+}
+
+/* ===================== 编辑器公共 ===================== */
+function fitCanvas(cv, iw, ih, maxH){
+  const wrapW = cv.parentElement.clientWidth - 4;
+  const maxHeight = maxH || (window.innerHeight * 0.55);
+  let w = wrapW, h = w * ih / iw;
+  if(h > maxHeight){ h = maxHeight; w = h * iw / ih; }
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return { w, h, ctx };
+}
+
+function bindDrag(cv, getPoints, onMove, hitR){
+  let dragIdx = -1;
+  const pos = ev => {
+    const r = cv.getBoundingClientRect();
+    return [ev.clientX - r.left, ev.clientY - r.top];
+  };
+  cv.addEventListener('pointerdown', ev=>{
+    const [x,y] = pos(ev);
+    const pts = getPoints();
+    let best = -1, bestD = 1e9;
+    pts.forEach((p,i)=>{
+      const d = Math.hypot(p[0]-x, p[1]-y);
+      if(d < bestD){ bestD = d; best = i; }
+    });
+    if(bestD <= (hitR || 26)){ dragIdx = best; cv.setPointerCapture(ev.pointerId); ev.preventDefault(); }
+  });
+  cv.addEventListener('pointermove', ev=>{
+    if(dragIdx < 0) return;
+    const [x,y] = pos(ev);
+    onMove(dragIdx, x, y);
+    ev.preventDefault();
+  });
+  const end = ev=>{ dragIdx = -1; };
+  cv.addEventListener('pointerup', end);
+  cv.addEventListener('pointercancel', end);
+}
+
+/* ===================== 衣服编辑器 ===================== */
+let editingSlot = null;
+const gCanvas = $('#g-canvas');
+
+function openGarment(slot){
+  editingSlot = slot;
+  $('#g-title').textContent = SLOT_LABEL[slot];
+  $('#g-tol').value = state.garments[slot].tol;
+  $('#g-tolv').textContent = state.garments[slot].tol;
+  if(!IMG[slot]) pickGarment(slot);
+  else { openSheet('sheet-garment'); requestAnimationFrame(drawGarmentEditor); }
+}
+
+function pickGarment(slot){
+  const inp = $('#picker');
+  inp.onchange = async e => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if(!f) return;
+    try{
+      const im = await fitBlob(f, 1400);
+      IMG[slot] = im;
+      await kvSet('img_' + slot, f);
+      CUT[slot] = cutout(im, state.garments[slot].tol);
+      drawScene();
+      openSheet('sheet-garment');
+      requestAnimationFrame(drawGarmentEditor);
+      toast('已载入，拖动圆点对齐');
+    }catch(err){ toast('图片读取失败'); }
+  };
+  inp.click();
+}
+
+function drawGarmentEditor(){
+  const slot = editingSlot;
+  const cut = CUT[slot];
+  if(!cut){ return; }
+  const { w, h, ctx } = fitCanvas(gCanvas, cut.width, cut.height);
+
+  ctx.clearRect(0,0,w,h);
+  // 棋盘格
+  const s = 8;
+  for(let y=0;y<h;y+=s) for(let x=0;x<w;x+=s){
+    ctx.fillStyle = ((x/s + y/s) % 2 === 0) ? '#151518' : '#1c1c20';
+    ctx.fillRect(x,y,s,s);
+  }
+  ctx.drawImage(cut, 0, 0, w, h);
+
+  const keys = slotKeys(slot);
+  const A = slotKeysObj(slot);
+  keys.forEach((k,i)=>{
+    const p = A[k];
+    const x = p[0]*w, y = p[1]*h;
+    ctx.beginPath(); ctx.arc(x,y,11,0,Math.PI*2);
+    ctx.fillStyle = 'rgba(217,180,106,.92)'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#17140c'; ctx.stroke();
+    ctx.fillStyle = '#17140c'; ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(String(i+1), x, y+0.5);
+  });
+
+  // 记录画布尺寸供拖动换算
+  gCanvas._w = w; gCanvas._h = h;
+  gCanvas._keys = keys;
+}
+
+bindDrag(gCanvas,
+  ()=>{
+    if(!gCanvas._keys) return [];
+    return gCanvas._keys.map(k => {
+      const p = state.garments[editingSlot].anchors[k];
+      return [p[0]*gCanvas._w, p[1]*gCanvas._h];
+    });
+  },
+  (i,x,y)=>{
+    const k = gCanvas._keys[i];
+    state.garments[editingSlot].anchors[k] = [
+      Math.max(0, Math.min(1, x/gCanvas._w)),
+      Math.max(0, Math.min(1, y/gCanvas._h))
+    ];
+    drawGarmentEditor();
+  }, 30
+);
+
+$('#g-tol').oninput = e => {
+  const v = +e.target.value;
+  $('#g-tolv').textContent = v;
+  state.garments[editingSlot].tol = v;
+  if(IMG[editingSlot]){
+    CUT[editingSlot] = cutout(IMG[editingSlot], v);
+    drawGarmentEditor();
+    drawScene();
+  }
+};
+$('#g-upload').onclick = ()=> pickGarment(editingSlot);
+$('#g-auto').onclick = ()=>{
+  state.garments[editingSlot].anchors = clone(GARMENT_DEFAULT[SLOT_TPL[editingSlot]]);
+  drawGarmentEditor(); saveLayout();
+};
+$('#g-remove').onclick = async ()=>{
+  const s = editingSlot;
+  IMG[s] = null; CUT[s] = null;
+  try{ await kvSet('img_' + s, null); }catch(e){}
+  closeSheet('sheet-garment');
+  drawScene();
+  toast('已移除' + SLOT_LABEL[s]);
+};
+$('#g-done').onclick = ()=>{ closeSheet('sheet-garment'); drawScene(); saveLayout(); };
+
+/* ===================== 人体编辑器 ===================== */
+const bCanvas = $('#b-canvas');
+
+function drawBodyEditor(){
+  const src = IMG.person;
+  const iw = src ? src.width : 3;
+  const ih = src ? src.height : 4;
+  const { w, h, ctx } = fitCanvas(bCanvas, iw, ih);
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = '#141416'; ctx.fillRect(0,0,w,h);
+
+  if(src) ctx.drawImage(src, 0, 0, w, h);
+  else drawMannequin(ctx, { x:0, y:0, w, h });
+
+  BODY_KEYS.forEach((k,i)=>{
+    const p = state.body[k];
+    const x = p[0]*w, y = p[1]*h;
+    ctx.beginPath(); ctx.arc(x,y,10,0,Math.PI*2);
+    ctx.fillStyle = 'rgba(217,180,106,.95)'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#17140c'; ctx.stroke();
+    ctx.fillStyle = '#17140c'; ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(String(i+1), x, y+0.5);
+  });
+  bCanvas._w = w; bCanvas._h = h;
+}
+
+bindDrag(bCanvas,
+  ()=> BODY_KEYS.map(k => [state.body[k][0]*bCanvas._w, state.body[k][1]*bCanvas._h]),
+  (i,x,y)=>{
+    const k = BODY_KEYS[i];
+    state.body[k] = [
+      Math.max(0, Math.min(1, x/bCanvas._w)),
+      Math.max(0, Math.min(1, y/bCanvas._h))
+    ];
+    drawBodyEditor();
+  }, 28
+);
+
+$('#b-reset').onclick = ()=>{ state.body = clone(BODY_DEFAULT); drawBodyEditor(); drawScene(); saveLayout(); };
+$('#b-done').onclick = ()=>{ closeSheet('sheet-body'); drawScene(); saveLayout(); };
+
+/* ===================== 人像 ===================== */
+$('#btn-person').onclick = ()=>{
+  const inp = $('#picker-person');
+  inp.onchange = async e => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if(!f) return;
+    try{
+      const im = await fitBlob(f, 1600);
+      IMG.person = im;
+      await kvSet('img_person', f);
+      drawScene();
+      toast('人像已设置，点 ✚ 可以微调关键点');
+    }catch(err){ toast('图片读取失败'); }
+  };
+  inp.click();
+};
+
+/* ===================== 其它按钮 ===================== */
+$('#btn-body').onclick = ()=>{ openSheet('sheet-body'); requestAnimationFrame(drawBodyEditor); };
+$('#btn-help').onclick = ()=> openSheet('sheet-help');
+
+$('#btn-save').onclick = ()=>{
+  const a = document.createElement('a');
+  a.download = 'tryon-' + Date.now() + '.png';
+  a.href = stage.toDataURL('image/png');
+  a.click();
+  toast('已导出');
+};
+
+document.querySelectorAll('.slot').forEach(el=>{
+  el.onclick = ()=> openGarment(el.dataset.slot);
+});
+document.querySelectorAll('[data-close]').forEach(b=>{
+  b.onclick = ()=>{
+    closeSheet(b.dataset.close);
+    if(b.dataset.close === 'sheet-garment') drawScene();
+    saveLayout();
+  };
+});
+
+/* ===================== 持久化 ===================== */
+async function saveLayout(){
+  try{
+    await kvSet('layout', {
+      body: state.body,
+      garments: {
+        inner: { anchors: state.garments.inner.anchors, tol: state.garments.inner.tol },
+        outer: { anchors: state.garments.outer.anchors, tol: state.garments.outer.tol },
+        bottom:{ anchors: state.garments.bottom.anchors, tol: state.garments.bottom.tol }
+      }
+    });
+  }catch(e){}
+}
+
+(async function boot(){
+  try{ db = await openDB(); }
+  catch(e){
+    document.body.innerHTML = '<div style="padding:40px;line-height:1.8;font-size:14px">' +
+      '无法使用本地数据库，请用 http/https 打开。<br>' + (e && e.message) + '</div>';
+    return;
+  }
+
+  const layout = await kvGet('layout');
+  if(layout){
+    if(layout.body) state.body = layout.body;
+    if(layout.garments){
+      for(const s of ['inner','outer','bottom']){
+        if(layout.garments[s]){
+          state.garments[s].anchors = layout.garments[s].anchors || state.garments[s].anchors;
+          state.garments[s].tol = layout.garments[s].tol != null ? layout.garments[s].tol : 46;
+        }
+      }
+    }
+  }
+
+  for(const s of ['inner','outer','bottom']){
+    const b = await kvGet('img_' + s);
+    if(b){
+      try{
+        const im = await fitBlob(b, 1400);
+        IMG[s] = im;
+        CUT[s] = cutout(im, state.garments[s].tol);
+      }catch(e){}
+    }
+  }
+  const pb = await kvGet('img_person');
+  if(pb){ try{ IMG.person = await fitBlob(pb, 1600); }catch(e){} }
+
+  drawScene();
+  window.addEventListener('resize', ()=> drawScene());
+})();
+</script>
+</body>
+</html>
