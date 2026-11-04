@@ -497,10 +497,40 @@ function askDone(v){
   if(r) r(v);
 }
 
-function openSheet(id){ $('#'+id).classList.add('on'); }
+/* 弹窗栈：同一时刻只显示一个，关闭后自动回到上一层。
+   确认框(ask)例外，它始终浮在最上面，不参与栈。 */
+const sheetStack = [];
+
+function openSheet(id){
+  if(id === 'ask'){ $('#'+id).classList.add('on'); return; }
+
+  const top = sheetStack[sheetStack.length - 1];
+  if(top && top !== id){
+    const prev = $('#'+top);
+    if(prev) prev.classList.remove('on');
+  }
+  const i = sheetStack.indexOf(id);
+  if(i >= 0) sheetStack.splice(i, 1);
+  sheetStack.push(id);
+  $('#'+id).classList.add('on');
+}
+
 function closeSheet(id){
-  $('#'+id).classList.remove('on');
-  if(id === 'manage' || id === 'favs') clearTempURLs();
+  const el = $('#'+id);
+  if(el) el.classList.remove('on');
+  if(id === 'ask') return;
+
+  const i = sheetStack.lastIndexOf(id);
+  if(i >= 0) sheetStack.splice(i, 1);
+
+  if(id === 'manage') clearMgrURLs();
+  if(id === 'favs') clearTempURLs();
+
+  const prevId = sheetStack[sheetStack.length - 1];
+  if(prevId){
+    const prev = $('#'+prevId);
+    if(prev) prev.classList.add('on');
+  }
 }
 
 /* 列表类浮层用一次性 URL，关掉就释放，避免和滑动窗口的缓存互相干扰 */
@@ -516,6 +546,21 @@ function tempURL(id){
 function clearTempURLs(){
   for(const u of TEMP_URLS) URL.revokeObjectURL(u);
   TEMP_URLS = [];
+}
+
+/* 管理列表单独一套 URL，避免和收藏列表互相回收 */
+let MGR_URLS = [];
+function mgrURL(id){
+  return blobGet(id).then(b => {
+    if(!b) return null;
+    const u = URL.createObjectURL(b);
+    MGR_URLS.push(u);
+    return u;
+  });
+}
+function clearMgrURLs(){
+  for(const u of MGR_URLS) URL.revokeObjectURL(u);
+  MGR_URLS = [];
 }
 
 const fmtDate = iso => {
@@ -982,7 +1027,7 @@ function openEditor(item, opts){
 
   $('#ed-del').style.display = (opts && opts.queue) ? 'none' : '';
   $('#ed-done').textContent = (opts && opts.queue) ? '跳过这张' : '完成';
-  box.classList.add('on');
+  openSheet('editor');
 }
 
 function renderCatChips(item){
@@ -1050,7 +1095,7 @@ async function closeEditor(advance){
   if(advance && opts && opts.onAdvance) await opts.onAdvance();
   else {
     await refresh();
-    if($('#manage').classList.contains('on')) openManage();
+    if(sheetStack.includes('manage')) await renderManage();
   }
 }
 
@@ -1437,7 +1482,7 @@ function applyFilter(){
   const dot = $('#f-dot');
   if(dot) dot.style.display = filterActive() ? '' : 'none';
   render();
-  if($('#manage').classList.contains('on')) openManage();
+  if(sheetStack.includes('manage')) renderManage();
 }
 
 function openFilter(){
@@ -1447,9 +1492,14 @@ function openFilter(){
 
 /* ============================== 管理单品 ============================== */
 async function openManage(){
-  const box = $('#mgr-list');
-  box.innerHTML = '';
   openSheet('manage');
+  await renderManage();
+}
+
+async function renderManage(){
+  const box = $('#mgr-list');
+  clearMgrURLs();
+  box.innerHTML = '';
 
   if(!ITEMS.length){ box.innerHTML = '<div class="empty-tip">还没有单品</div>'; return; }
 
@@ -1461,7 +1511,7 @@ async function openManage(){
     row.className = 'mgr-row';
 
     const img = document.createElement('img');
-    const u = await tempURL(it.id);
+    const u = await mgrURL(it.id);
     if(u) img.src = u;
     row.appendChild(img);
 
@@ -1489,7 +1539,7 @@ async function openManage(){
       if(idx >= 0){ FAVS = FAVS.filter(f => f.t !== it.id && f.b !== it.id); await kvSet('favorites', FAVS); }
       row.remove();
       await refresh();
-      if(!$('#mgr-list').children.length){ openManage(); }
+      if(!$('#mgr-list').children.length){ renderManage(); }
     };
     row.appendChild(del);
 
@@ -1574,7 +1624,7 @@ function bind(){
     closeSheet('editor');
     document.querySelector('#ed-img').removeAttribute('src');
     await refresh();
-    if($('#manage').classList.contains('on')) openManage();
+    if(sheetStack.includes('manage')) await renderManage();
     toast('已删除');
   };
 
