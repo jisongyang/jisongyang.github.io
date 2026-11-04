@@ -1,20 +1,508 @@
-
 <!DOCTYPE html>
 <html lang="zh">
-    <head>
-	<!-- 	<meta http-equiv="Content-Type" content=text/html;charset="utf-8"> -->
-	<!-- <meta http-equiv="Refresh" content="3;url=note_jump/jump.html"> -->
-	<title>just for fun</title>
-	<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    </head>
-    <body>
-	  <a href="code_learning/jump.html">code_learing</a>
-	  <a href="paper_reading/jump.html">paper_reading</a>
-	  <a href="profile/profile">profile</a>
-	  <a href="search/diary/interface.html">search</a>
-	  <a href="show_interesting/jump.html">show_interesting</a>
-	  <a href="games/jump.html">games</a>
-	  <a href="tool/jump.html">tool</a>
-    </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#04050a">
+<title>just for fun</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#04050a;
+  --ink:#eef1ff;
+  --muted:#9aa3c7;
+  --cyan:#22d3ee;
+  --violet:#8b5cf6;
+  --pink:#f472b6;
+  --gold:#fbbf24;
+  --line:rgba(255,255,255,.10);
+  --serif:"Noto Serif SC","Songti SC",serif;
+  --sans:"Space Grotesk","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;min-height:100%;
+  background:var(--bg);color:var(--ink);
+  font-family:var(--sans);
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  opacity:0;transition:opacity .9s ease;
+}
+body.ready{opacity:1}
+
+/* ===== 背景 ===== */
+.aurora{
+  position:fixed;inset:-40vmax;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(42vmax 42vmax at 16% 10%, rgba(34,211,238,.30), transparent 62%),
+    radial-gradient(48vmax 48vmax at 84% 16%, rgba(139,92,246,.32), transparent 64%),
+    radial-gradient(54vmax 54vmax at 52% 96%, rgba(244,114,182,.24), transparent 66%);
+  filter:blur(46px);
+  animation:drift 24s ease-in-out infinite alternate;
+}
+@keyframes drift{
+  0%{transform:translate3d(-2%,-1%,0) scale(1)}
+  50%{transform:translate3d(2%,2%,0) scale(1.08)}
+  100%{transform:translate3d(-1%,3%,0) scale(1.03)}
+}
+.beam{
+  position:fixed;left:50%;top:50%;width:200vmax;height:200vmax;
+  margin:-100vmax 0 0 -100vmax;z-index:0;pointer-events:none;
+  background:conic-gradient(from 0deg,
+    transparent 0 62%,
+    rgba(34,211,238,.16) 72%,
+    rgba(139,92,246,.20) 80%,
+    rgba(244,114,182,.12) 86%,
+    transparent 94%);
+  filter:blur(58px);opacity:.85;
+  animation:rotate 70s linear infinite;
+}
+@keyframes rotate{to{transform:rotate(360deg)}}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.grain{
+  position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.055;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+.vignette{
+  position:fixed;inset:0;z-index:2;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 0%, transparent 40%, rgba(2,3,8,.72) 100%);
+}
+.glow{
+  position:fixed;z-index:2;width:680px;height:680px;left:0;top:0;margin:-340px 0 0 -340px;
+  border-radius:50%;pointer-events:none;opacity:0;
+  background:radial-gradient(circle, rgba(34,211,238,.16), rgba(139,92,246,.10) 38%, transparent 66%);
+  filter:blur(12px);transition:opacity .4s ease;
+}
+.ring{
+  position:fixed;z-index:80;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;
+  border:1px solid rgba(255,255,255,.5);border-radius:50%;pointer-events:none;opacity:0;
+  transition:width .25s,height .25s,margin .25s,border-color .25s,opacity .3s,box-shadow .25s;
+}
+.ring.hot{
+  width:70px;height:70px;margin:-35px 0 0 -35px;border-color:rgba(34,211,238,.9);
+  box-shadow:0 0 26px rgba(34,211,238,.35) inset,0 0 30px rgba(34,211,238,.3);
+}
+
+/* ===== 布局 ===== */
+main{position:relative;z-index:4;max-width:1180px;margin:0 auto;
+  padding:clamp(26px,6vh,70px) clamp(18px,4vw,40px) 40px;}
+.hero{position:relative;text-align:center;padding:clamp(6px,5vh,56px) 0 clamp(30px,6vh,64px)}
+.orb{
+  position:absolute;left:50%;top:min(46%,260px);width:min(760px,96vw);height:min(420px,60vw);
+  transform:translate(-50%,-50%);pointer-events:none;z-index:-1;
+  background:radial-gradient(closest-side, rgba(139,92,246,.45), rgba(34,211,238,.16) 55%, transparent 72%);
+  filter:blur(38px);animation:pulse 9s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(1)}50%{opacity:.95;transform:translate(-50%,-50%) scale(1.08)}}
+.eyebrow{margin:0 0 20px;font-size:11px;letter-spacing:.44em;text-transform:uppercase;color:var(--muted)}
+.eyebrow b{color:var(--cyan);font-weight:500}
+h1.title{
+  margin:0;font-size:clamp(44px,12.4vw,158px);line-height:.9;font-weight:700;letter-spacing:-.035em;
+  background:linear-gradient(100deg,#ffffff 6%,#a5f3fc 24%,#c4b5fd 50%,#fbcfe8 72%,#ffffff 94%);
+  background-size:240% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:sheen 8s linear infinite;
+  filter:drop-shadow(0 0 52px rgba(139,92,246,.45)) drop-shadow(0 0 18px rgba(34,211,238,.25));
+}
+@keyframes sheen{to{background-position:240% 0}}
+.hero .cn{margin:24px 0 0;font-family:var(--serif);font-weight:600;
+  font-size:clamp(15px,2.6vw,22px);letter-spacing:.36em;color:#dbe0ff;}
+.typer{margin:14px 0 0;height:1.7em;font-size:clamp(12px,1.7vw,14px);letter-spacing:.22em;color:var(--muted)}
+.typer b{color:var(--gold);font-weight:600;text-shadow:0 0 18px rgba(251,191,36,.45)}
+.caret{display:inline-block;width:1px;height:1.05em;margin-left:2px;background:var(--gold);
+  vertical-align:-.16em;animation:blink 1.05s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+.hintline{margin:clamp(22px,4vh,44px) 0 0;font-size:11px;letter-spacing:.34em;color:rgba(154,163,199,.8);
+  display:flex;gap:16px;align-items:center;justify-content:center}
+.hintline::before,.hintline::after{content:"";height:1px;width:clamp(26px,9vw,84px);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
+
+/* ===== 卡片 ===== */
+.grid{display:grid;gap:clamp(12px,1.6vw,18px);
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));perspective:1500px}
+.card{
+  position:relative;display:block;text-decoration:none;color:inherit;
+  padding:22px 20px 20px;border-radius:20px;min-height:186px;
+  background:
+    linear-gradient(158deg, rgba(255,255,255,.10), rgba(255,255,255,.02) 46%, rgba(255,255,255,.05)),
+    rgba(8,10,20,.55);
+  border:1px solid var(--line);
+  backdrop-filter:blur(16px) saturate(135%);
+  -webkit-backdrop-filter:blur(16px) saturate(135%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 18px 40px -30px rgba(0,0,0,.9);
+  transform-style:preserve-3d;opacity:0;
+  transition:border-color .35s,box-shadow .4s,background .4s;
+  overflow:hidden;will-change:transform;
+}
+.card.in{animation:rise .85s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes rise{from{opacity:0;transform:translateY(28px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.card::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(340px 340px at var(--mx,50%) var(--my,50%),
+    color-mix(in srgb, var(--accent) 26%, transparent),transparent 62%);
+  opacity:0;transition:opacity .35s}
+.card::after{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;
+  background:conic-gradient(from var(--ang,0deg),var(--accent),#ffffff88,var(--accent));
+  -webkit-mask:linear-gradient(#000,#000) content-box,linear-gradient(#000,#000);
+  -webkit-mask-composite:xor;mask-composite:exclude;padding:1px;opacity:0;transition:opacity .4s}
+@property --ang{syntax:"<angle>";initial-value:0deg;inherits:false}
+.card:hover,.card:focus-visible{
+  border-color:color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.2),
+    0 26px 70px -30px color-mix(in srgb, var(--accent) 55%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+  outline:none;
+}
+.card:hover::before,.card:focus-visible::before{opacity:1}
+.card:hover::after,.card:focus-visible::after{opacity:1;animation:spin 5s linear infinite}
+@keyframes spin{to{--ang:360deg}}
+.card .inner{position:relative;z-index:1;transform:translateZ(26px)}
+.ico{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;
+  border:1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background:linear-gradient(150deg,color-mix(in srgb, var(--accent) 26%, transparent),rgba(255,255,255,.03));
+  box-shadow:0 0 22px -6px color-mix(in srgb, var(--accent) 55%, transparent),inset 0 1px 0 rgba(255,255,255,.22);
+  margin-bottom:16px;transform:translateZ(40px)}
+.ico svg{width:21px;height:21px;stroke:var(--accent);fill:none;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent))}
+.card h2{margin:0 0 6px;font-family:var(--serif);font-weight:600;font-size:20px;letter-spacing:.14em}
+.card .en{display:block;margin:0 0 11px;font-size:9.5px;letter-spacing:.36em;
+  color:color-mix(in srgb, var(--accent) 72%, #ffffff);text-transform:uppercase;opacity:.85}
+.card .desc{margin:0 0 14px;font-size:12px;line-height:1.8;color:rgba(206,213,242,.82);letter-spacing:.04em}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags i{font-style:normal;font-size:10px;letter-spacing:.08em;padding:3px 8px;border-radius:999px;
+  color:rgba(226,232,255,.9);
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05)}
+.card .go{position:absolute;right:18px;bottom:16px;font-size:12px;letter-spacing:.2em;color:var(--accent);
+  opacity:0;transform:translateX(-8px);transition:opacity .3s,transform .3s;
+  text-shadow:0 0 14px color-mix(in srgb, var(--accent) 70%, transparent)}
+.card:hover .go,.card:focus-visible .go{opacity:1;transform:translateX(0)}
+.card:active{transform:translateY(-2px) scale(.988)}
+
+/* ===== 角落 HUD ===== */
+.hud{position:fixed;top:16px;right:20px;z-index:70;display:flex;gap:9px;align-items:center;
+  font-size:10px;letter-spacing:.24em;color:rgba(154,163,199,.72);
+  font-variant-numeric:tabular-nums;pointer-events:none}
+.hud .live{width:5px;height:5px;border-radius:50%;background:#34d399;
+  box-shadow:0 0 10px #34d399;animation:blink 2.2s ease-in-out infinite}
+.hud .sep{opacity:.3}
+@media (max-width:640px){.hud{display:none}}
+
+/* ===== 页脚 + 跑马灯 ===== */
+footer{margin-top:clamp(34px,6vh,64px);padding-top:22px;border-top:1px solid var(--line);
+  display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;
+  font-size:11px;letter-spacing:.16em;color:rgba(154,163,199,.75)}
+footer .dot{color:var(--pink);text-shadow:0 0 10px rgba(244,114,182,.7)}
+.ticker{margin-top:16px;overflow:hidden;border-top:1px solid rgba(255,255,255,.06);
+  border-bottom:1px solid rgba(255,255,255,.06);padding:10px 0;
+  -webkit-mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);
+  mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+.ticker div{display:flex;gap:34px;width:max-content;animation:marquee 26s linear infinite;
+  font-size:11px;letter-spacing:.3em;color:rgba(154,163,199,.55);white-space:nowrap}
+.ticker span{display:inline-flex;align-items:center;gap:34px}
+.ticker span::after{content:"◆";font-size:7px;color:rgba(34,211,238,.5)}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+@media (max-width:520px){
+  .card{min-height:168px;padding:18px 16px}
+  .hero{padding-top:6vh}
+  .card .desc{margin-bottom:12px}
+  footer{justify-content:center;text-align:center}
+}
+@media (prefers-reduced-motion:reduce){
+  .aurora,.beam,.orb,h1.title,.ticker div{animation:none}
+  .card{opacity:1;transform:none}
+  .card.in{animation:none}
+  .card:hover::after{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"></div>
+<div class="beam" aria-hidden="true"></div>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="vignette" aria-hidden="true"></div>
+<div class="glow" id="glow" aria-hidden="true"></div>
+<div class="ring" id="ring" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<div class="hud" aria-hidden="true">
+  <span class="live"></span><span id="hudTime">--:--:--</span>
+  <span class="sep">/</span><span>GITHUB PAGES</span>
+</div>
+
+<main>
+  <header class="hero">
+    <div class="orb" aria-hidden="true"></div>
+    <p class="eyebrow">jisongyang<b>.github.io</b> · since 2019</p>
+    <h1 class="title">JUST FOR FUN</h1>
+    <p class="cn">随 手 记 · 玩 意 儿 收 藏 夹</p>
+    <p class="typer" aria-hidden="true">正在前往 <b id="typerWord">代码笔记</b><span class="caret"></span></p>
+    <p class="hintline">悬停卡片 · 进入板块</p>
+  </header>
+
+  <section class="grid" aria-label="板块入口">
+
+    <a class="card" href="code_learning/jump.html" style="--accent:#22d3ee">
+      <div class="inner">
+        <div class="ico"><svg viewBox="0 0 24 24"><polyline points="9 7 4 12 9 17"/><polyline points="15 7 20 12 15 17"/></svg></div>
+        <h2>代码笔记</h2>
+        <span class="en">Code Notes</span>
+        <p class="desc">C++ / Python / Markdown / Git，写给自己看的学习记录。</p>
+        <div class="tags"><i>C++</i><i>Python</i><i>Git</i></div>
+      </div>
+      <span class="go">进入 →</span>
+    </a>
+
+    <a class="card" href="paper_reading/jump.html" style="--accent:#8b5cf6">
+      <div class="inner">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></svg></div>
+        <h2>论文阅读</h2>
+        <span class="en">Paper Reading</span>
+        <p class="desc">物联网方向论文的读后整理，按主题归档。</p>
+        <div class="tags"><i>IoT</i><i>读后整理</i></div>
+      </div>
+      <span class="go">进入 →</span>
+    </a>
+
+    <a class="card" href="profile/profile" style="--accent:#f472b6">
+      <div class="inner">
+        <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c1.4-4 4.2-5.6 7.5-5.6s6.1 1.6 7.5 5.6"/></svg></div>
+        <h2>关于</h2>
+        <span class="en">Profile</span>
+        <p class="desc">我是谁、在做些什么，以及这个站点的由来。</p>
+        <div class="tags"><i>自述</i></div>
+      </div>
+      <span class="go">进入 →</span>
+    </a>
+
+    <a class="card" href="search/diary/interface.html" style="--accent:#fbbf24">
+      <div class="inner">
+        <div class="ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.4"/><path d="M16.2 16.2 21 21"/></svg></div>
+        <h2>资料检索</h2>
+        <span class="en">Search</span>
+        <p class="desc">日记数据可视化与小说库检索，翻旧账专用。</p>
+        <div class="tags"><i>日记统计</i><i>小说库</i></div>
+      </div>
+      <span class="go">进入 →</span>
+    </a>
+
+    <a class="card" href="show_interesting/jump.html" style="--accent:#34d399">
+      <div class="inner">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18.5 16.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></div>
+        <h2>有意思</h2>
+        <span class="en">Show Interesting</span>
+        <p class="desc">新闻时间线、轨迹地图、聊天记录导出、爬虫小记。</p>
+        <div class="tags"><i>时间线</i><i>地图</i><i>爬虫</i></div>
+      </div>
+      <span class="go">进入 →</span>
+    </a>
+
+    <a class="card" href="games/jump.html" style="--accent:#a78bfa">
+      <div class="inner">
+        <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="4"/><path d="M8 12.5h4M10 10.5v4"/><circle cx="16.5" cy="11.5" r=".8"/><circle cx="18.5" cy="14" r=".8"/></svg></div>
+        <h2>小游戏</h2>
+        <span class="en">Games</span>
+        <p class="desc">寻花令（诗词版 Wordle）与数字 Wordle，摸鱼首选。</p>
+        <div class="tags"><i>寻花令</i><i>Wordle</i></div>
+      </div>
+      <span class="go">进入 →</span>
+    </a>
+
+    <a class="card" href="tool/jump.html" style="--accent:#38bdf8">
+      <div class="inner">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M14.5 6.5a3.5 3.5 0 0 0 4.4 4.4L21 13l-8 8-2.1-2.1a3.5 3.5 0 0 0-4.4-4.4L4.3 12l5-5z"/></svg></div>
+        <h2>工具箱</h2>
+        <span class="en">Toolbox</span>
+        <p class="desc">衣橱搭配、试衣实验，以及之后随手加的小工具。</p>
+        <div class="tags"><i>衣橱搭配</i><i>试衣</i></div>
+      </div>
+      <span class="go">进入 →</span>
+    </a>
+
+  </section>
+
+  <footer>
+    <span>纯静态页面 · 托管于 GitHub Pages</span>
+    <span><span class="dot">●</span> 直接打开即用，无需后端</span>
+  </footer>
+
+  <div class="ticker" aria-hidden="true">
+    <div>
+      <span>代码笔记 CODE</span><span>论文阅读 PAPER</span><span>关于 PROFILE</span><span>资料检索 SEARCH</span><span>有意思 SHOW</span><span>小游戏 GAMES</span><span>工具箱 TOOL</span>
+      <span>代码笔记 CODE</span><span>论文阅读 PAPER</span><span>关于 PROFILE</span><span>资料检索 SEARCH</span><span>有意思 SHOW</span><span>小游戏 GAMES</span><span>工具箱 TOOL</span>
+    </div>
+  </div>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fine = matchMedia("(pointer: fine)").matches;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.body.classList.add("ready");
+    document.querySelectorAll(".card").forEach((el, i) => {
+      el.style.animationDelay = (0.07 + i * 0.07) + "s";
+      el.classList.add("in");
+    });
+    typeLoop();
+    startHud();
+  });
+
+  /* ---- 角落时钟 ---- */
+  function startHud(){
+    const el = document.getElementById("hudTime");
+    if (!el) return;
+    const tick = () => {
+      const d = new Date();
+      const p = n => String(n).padStart(2, "0");
+      el.textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    };
+    tick();
+    setInterval(tick, 1000);
+  }
+
+  /* ---- 打字机 ---- */
+  function typeLoop(){
+    const words = ["代码笔记","论文阅读","关于","资料检索","有意思","小游戏","工具箱"];
+    const el = document.getElementById("typerWord");
+    if (!el) return;
+    if (reduce) { el.textContent = words[0]; return; }
+    let w = 0, i = 1, del = false;
+    (function tick(){
+      const word = words[w];
+      if (!del) {
+        i++;
+        if (i > word.length) { del = true; i = word.length; setTimeout(tick, 1400); return; }
+      } else {
+        i--;
+        if (i < 0) { del = false; w = (w + 1) % words.length; i = 0; setTimeout(tick, 260); return; }
+      }
+      el.textContent = word.slice(0, i) || " ";
+      setTimeout(tick, del ? 65 : 150);
+    })();
+  }
+
+  /* ---- 粒子星图 ---- */
+  const canvas = document.getElementById("bg");
+  const ctx = canvas.getContext("2d", { alpha: true });
+  let W = 0, H = 0, dpr = 1, parts = [];
+  const mouse = { x: -9999, y: -9999 };
+  const useGlow = !reduce && Math.min(screen.width, screen.height) > 600;
+
+  function sizeCanvas(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = reduce ? 0 : Math.min(150, Math.round((W * H) / 15000));
+    parts = Array.from({ length: n }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 1.6 + 0.5,
+      hue: Math.random() < 0.55 ? 190 : 268,
+      tw: Math.random() * Math.PI * 2
+    }));
+  }
+
+  function frame(t){
+    if (!ctx) return;
+    ctx.clearRect(0, 0, W, H);
+    const linkDist = 132;
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i];
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < -24) p.x = W + 24; if (p.x > W + 24) p.x = -24;
+      if (p.y < -24) p.y = H + 24; if (p.y > H + 24) p.y = -24;
+
+      const dx = p.x - mouse.x, dy = p.y - mouse.y;
+      const dm = Math.hypot(dx, dy);
+      if (dm < 160 && dm > 0.01) {
+        const f = (160 - dm) / 160 * 0.6;
+        p.x += (dx / dm) * f * 2.4;
+        p.y += (dy / dm) * f * 2.4;
+      }
+
+      const twinkle = 0.55 + 0.45 * Math.sin((t || 0) / 900 + p.tw);
+      if (useGlow) { ctx.shadowBlur = 12; ctx.shadowColor = `hsla(${p.hue},95%,70%,.8)`; }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${p.hue}, 95%, 74%, ${0.35 + twinkle * 0.5})`;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      for (let j = i + 1; j < parts.length; j++) {
+        const q = parts[j];
+        const d = Math.hypot(p.x - q.x, p.y - q.y);
+        if (d < linkDist) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+          ctx.strokeStyle = `hsla(205, 98%, 80%, ${(1 - d / linkDist) * 0.20})`;
+          ctx.lineWidth = 0.75;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ---- 指针：光晕 / 圆环 / 卡片倾斜 ---- */
+  const glow = document.getElementById("glow");
+  const ring = document.getElementById("ring");
+  let gx = 0, gy = 0, tx = 0, ty = 0, rx = 0, ry = 0;
+
+  function onMove(e){
+    tx = e.clientX; ty = e.clientY;
+    mouse.x = e.clientX; mouse.y = e.clientY;
+    glow.style.opacity = "1"; ring.style.opacity = "1";
+    rx = e.clientX; ry = e.clientY;
+  }
+  function loopGlow(){
+    gx += (tx - gx) * 0.14; gy += (ty - gy) * 0.14;
+    glow.style.transform = `translate(${gx}px, ${gy}px)`;
+    ring.style.transform = `translate(${rx}px, ${ry}px)`;
+    requestAnimationFrame(loopGlow);
+  }
+
+  if (fine && !reduce) {
+    window.addEventListener("pointermove", onMove, { passive: true });
+    document.addEventListener("pointerleave", () => {
+      glow.style.opacity = "0"; ring.style.opacity = "0";
+      mouse.x = -9999; mouse.y = -9999;
+    });
+    requestAnimationFrame(loopGlow);
+  }
+
+  document.querySelectorAll(".card").forEach(card => {
+    card.addEventListener("pointerenter", () => ring.classList.add("hot"));
+    card.addEventListener("pointerleave", () => {
+      ring.classList.remove("hot");
+      card.style.transform = "";
+    });
+    if (!fine || reduce) return;
+    card.addEventListener("pointermove", e => {
+      const r = card.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width;
+      const py = (e.clientY - r.top) / r.height;
+      card.style.setProperty("--mx", (px * 100).toFixed(1) + "%");
+      card.style.setProperty("--my", (py * 100).toFixed(1) + "%");
+      card.style.transform =
+        `perspective(900px) rotateX(${((0.5 - py) * 10).toFixed(2)}deg) ` +
+        `rotateY(${((px - 0.5) * 12).toFixed(2)}deg) translateY(-6px)`;
+    });
+  });
+
+  sizeCanvas();
+  if (!reduce) requestAnimationFrame(frame);
+  window.addEventListener("resize", sizeCanvas, { passive: true });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { mouse.x = -9999; mouse.y = -9999; }
+  });
+})();
+</script>
+</body>
 </html>
