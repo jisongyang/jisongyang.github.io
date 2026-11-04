@@ -224,6 +224,29 @@ button:disabled{opacity:.4}
 .fav-row .del{color:var(--danger);font-size:12px;padding:8px}
 .empty-tip{font-size:12.5px;color:var(--dim2);text-align:center;padding:26px 0}
 
+/* ---------- 管理页筛选条 ---------- */
+.mfilter{
+  position:sticky;top:-14px;z-index:3;background:var(--panel);
+  padding:4px 0 8px;margin:-4px 0 6px;border-bottom:1px solid var(--line);
+}
+.mf-row{display:flex;align-items:center;gap:8px;margin:7px 0}
+.mf-lb{flex:0 0 auto;width:32px;font-size:11.5px;color:var(--dim);letter-spacing:.08em}
+.mf-row .chips{flex:1;gap:6px}
+.chip.sm{height:30px;padding:0 11px;font-size:12.5px;border-radius:8px}
+.mf-sel{
+  flex:1;height:32px;border-radius:8px;background:#0f0f11;color:var(--fg);
+  border:1px solid var(--line);font-size:13px;padding:0 8px;
+  -webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);
+  background-position:calc(100% - 16px) 14px,calc(100% - 11px) 14px;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+}
+.mf-reset{
+  flex:0 0 auto;font-size:12px;color:var(--accent);padding:6px 8px;border-radius:8px;
+}
+.mf-reset.off{color:var(--dim2);opacity:.5;pointer-events:none}
+.mf-sum{font-size:11px;color:var(--dim2);margin-top:2px;padding-left:40px}
+
 /* ---------- 管理列表 ---------- */
 .mgr{display:flex;flex-direction:column;gap:8px}
 .mgr-row{display:flex;align-items:center;gap:10px;padding:7px;border-radius:10px;background:var(--panel2)}
@@ -370,7 +393,25 @@ button:disabled{opacity:.4}
 <div class="sheet" id="manage">
   <div class="sheet-body">
     <div class="grab"></div>
-    <div class="sheet-head"><h3>管理单品</h3><button class="close" id="m-filter">筛选</button><button class="close" data-close="manage">关闭</button></div>
+    <div class="sheet-head"><h3>管理单品</h3><button class="close" data-close="manage">关闭</button></div>
+
+    <div class="mfilter">
+      <div class="mf-row">
+        <span class="mf-lb">类别</span>
+        <div class="chips" id="mf-cats"></div>
+      </div>
+      <div class="mf-row">
+        <span class="mf-lb">季节</span>
+        <div class="chips" id="mf-seasons"></div>
+      </div>
+      <div class="mf-row">
+        <span class="mf-lb">颜色</span>
+        <select class="mf-sel" id="mf-color"></select>
+        <button class="mf-reset" id="mf-reset">重置</button>
+      </div>
+      <div class="mf-sum" id="mf-sum"></div>
+    </div>
+
     <div class="mgr" id="mgr-list"></div>
   </div>
 </div>
@@ -456,6 +497,19 @@ function passesFilter(it){
   return true;
 }
 function filteredItems(){ return ITEMS.filter(passesFilter); }
+
+/* 管理页自带一套筛选：类别 / 季节 / 颜色，三组之间是“且”，组内是“或”，空组不参与 */
+const MGR = { cats:[], seasons:[], color:'' };
+const mgrActive = () => MGR.cats.length > 0 || MGR.seasons.length > 0 || !!MGR.color;
+function mgrPass(it){
+  if(MGR.cats.length && !MGR.cats.includes(it.cat)) return false;
+  if(MGR.seasons.length){
+    const s = it.season || [];
+    if(!s.some(x => MGR.seasons.includes(x))) return false;
+  }
+  if(MGR.color && it.color !== MGR.color) return false;
+  return true;
+}
 
 /* ============================== 小工具 ============================== */
 const $  = s => document.querySelector(s);
@@ -1491,9 +1545,55 @@ function openFilter(){
 }
 
 /* ============================== 管理单品 ============================== */
+function renderMgrFilter(){
+  const cbox = $('#mf-cats');
+  cbox.innerHTML = '';
+  for(const cat of CATS){
+    const b = document.createElement('button');
+    b.className = 'chip sm' + (MGR.cats.includes(cat.k) ? ' sel' : '');
+    b.textContent = cat.n;
+    b.onclick = () => { toggleIn(MGR.cats, cat.k); renderMgrFilter(); renderManage(); };
+    cbox.appendChild(b);
+  }
+
+  const sbox = $('#mf-seasons');
+  sbox.innerHTML = '';
+  for(const s of SEASONS){
+    const b = document.createElement('button');
+    b.className = 'chip sm' + (MGR.seasons.includes(s.k) ? ' sel' : '');
+    b.textContent = s.n;
+    b.onclick = () => { toggleIn(MGR.seasons, s.k); renderMgrFilter(); renderManage(); };
+    sbox.appendChild(b);
+  }
+
+  const sel = $('#mf-color');
+  sel.innerHTML = '';
+  const all = document.createElement('option');
+  all.value = ''; all.textContent = '全部颜色';
+  sel.appendChild(all);
+  for(const c of COLORS){
+    const o = document.createElement('option');
+    o.value = c.k; o.textContent = c.n;
+    sel.appendChild(o);
+  }
+  sel.value = MGR.color;
+  sel.onchange = () => { MGR.color = sel.value; renderManage(); };
+
+  $('#mf-reset').classList.toggle('off', !mgrActive());
+}
+
 async function openManage(){
   openSheet('manage');
+  renderMgrFilter();
   await renderManage();
+}
+
+function setMgrSummary(n){
+  const el = $('#mf-sum');
+  if(!el) return;
+  el.textContent = mgrActive() ? ('筛选后 ' + n + ' / ' + ITEMS.length + ' 件') : ('共 ' + ITEMS.length + ' 件');
+  const reset = $('#mf-reset');
+  if(reset) reset.classList.toggle('off', !mgrActive());
 }
 
 async function renderManage(){
@@ -1501,10 +1601,11 @@ async function renderManage(){
   clearMgrURLs();
   box.innerHTML = '';
 
-  if(!ITEMS.length){ box.innerHTML = '<div class="empty-tip">还没有单品</div>'; return; }
+  if(!ITEMS.length){ box.innerHTML = '<div class="empty-tip">还没有单品</div>'; setMgrSummary(0); return; }
 
-  const list = filteredItems().sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
-  if(!list.length){ box.innerHTML = '<div class="empty-tip">筛选后没有符合条件的单品</div>'; return; }
+  const list = ITEMS.filter(mgrPass).sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+  setMgrSummary(list.length);
+  if(!list.length){ box.innerHTML = '<div class="empty-tip">没有符合筛选条件的单品</div>'; return; }
 
   for(const it of list){
     const row = document.createElement('div');
@@ -1562,7 +1663,10 @@ function bind(){
   $('#btn-backup').onclick = backup;
   $('#btn-set').onclick    = openSettings;
   $('#btn-filter').onclick = openFilter;
-  $('#m-filter').onclick   = openFilter;
+  $('#mf-reset').onclick = () => {
+    MGR.cats.length = 0; MGR.seasons.length = 0; MGR.color = '';
+    renderMgrFilter(); renderManage();
+  };
   $('#f-clear').onclick = () => {
     FILTER.colors.length = 0; FILTER.seasons.length = 0;
     renderFilterSheet(); applyFilter();
