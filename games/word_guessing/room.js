@@ -20,6 +20,19 @@
   var MAX_WORD = 16;        // 单个词最长字符数
   var MAX_NAME = 8;         // 昵称最长字符数
 
+  // 北斗七星：留空名字时用它兜底，最多 4 人，保证不重名
+  var STARS = ['天枢', '天璇', '天玑', '天权', '玉衡', '开阳', '摇光'];
+
+  function randomStar(state) {
+    var used = {};
+    if (state) {
+      state.players.forEach(function (p) { used[p.name] = true; });
+    }
+    var free = STARS.filter(function (s) { return !used[s]; });
+    var pool = free.length ? free : STARS;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
   // ---------- 小工具 ----------
 
   function cleanName(name) {
@@ -59,7 +72,7 @@
       maxPlayers: MAX_PLAYERS,
       players: [{
         id: hostId,
-        name: cleanName(name),
+        name: name ? cleanName(name) : randomStar(null),
         joinedAt: t,
         lastSeen: t,
         word: null,
@@ -84,7 +97,7 @@
     }
     p = {
       id: id,
-      name: cleanName(name || ('玩家' + (state.players.length + 1))),
+      name: name ? cleanName(name) : randomStar(state),
       joinedAt: t,
       lastSeen: t,
       word: null,
@@ -286,6 +299,8 @@
     OFFLINE_MS: OFFLINE_MS,
     MAX_WORD: MAX_WORD,
     MAX_NAME: MAX_NAME,
+    STARS: STARS,
+    randomStar: randomStar,
     cleanName: cleanName,
     cleanWord: cleanWord,
     find: find,

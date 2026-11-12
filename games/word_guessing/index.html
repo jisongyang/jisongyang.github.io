@@ -313,7 +313,7 @@
         </div>
 
         <div class="card pad stack">
-            <input id="name" class="field" type="text" maxlength="8" placeholder="昵称" autocomplete="nickname">
+            <input id="name" class="field" type="text" maxlength="8" placeholder="昵称（留空随机）" autocomplete="nickname">
             <button id="create" class="btn primary">创建房间</button>
             <button id="joinToggle" class="btn text">加入房间</button>
         </div>
@@ -549,9 +549,9 @@
 
     function startSession(asHost) {
         isHost = asHost;
-        var typed = ($('name').value || '').trim();
-        me.name = (typed || ('玩家' + randCode(2))).slice(0, 8);
-        saveName(me.name);
+        var typed = ($('name').value || '').trim().slice(0, 8);
+        me.name = typed;                 // 留空则交给房主分配北斗星名
+        if (typed) saveName(typed);
         pendingWord = null;
         lastFeedRound = 0;
 
@@ -784,7 +784,7 @@
 
             var nm = document.createElement('span');
             nm.className = 'nm';
-            nm.textContent = p.id === me.id ? '我' : p.name;
+            nm.textContent = p.id === me.id ? p.name + '·我' : p.name;
 
             av.appendChild(dot);
             el.appendChild(av);
