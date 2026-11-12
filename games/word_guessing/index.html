@@ -17,7 +17,6 @@
         --soft: #f1ede4;
         --ok: #2f7a54;
         --ok-bg: #e8f2ec;
-        --warn: #b4690e;
         --bad: #b4443a;
         --bad-bg: #f7ece9;
         --radius: 18px;
@@ -84,9 +83,7 @@
     .btn:active { transform: scale(.985); }
     .btn.primary { background: var(--ink-btn); color: #fdfbf6; }
     .btn.text { background: transparent; color: var(--muted); font-weight: 500; height: 44px; }
-    .btn.ghost { background: var(--soft); color: var(--ink); font-weight: 600; }
     .btn.wide { width: 100%; }
-    .btn.small { height: 40px; padding: 0 16px; font-size: 14px; border-radius: 12px; }
 
     .tiny { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
     .center { text-align: center; }
@@ -202,7 +199,6 @@
         font-variant-numeric: tabular-nums;
     }
     .tag.ok { background: var(--ok-bg); color: var(--ok); }
-    .tag.bad { background: var(--bad-bg); color: var(--bad); }
 
     .room-big {
         display: block;
@@ -253,16 +249,9 @@
     .words { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
     .words li { display: flex; align-items: baseline; gap: 12px; padding: 6px 0; }
     .words .n { flex: none; width: 58px; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .words .w { font-size: 17px; font-weight: 600; word-break: break-word; }
-    .words.big .w { font-size: 19px; }
+    .words .w { font-size: 19px; font-weight: 600; word-break: break-word; }
 
-    .verdict { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
-    .verdict .txt { font-size: 14px; font-weight: 600; color: var(--warn); }
-
-    .countbar { height: 2px; margin-top: 12px; border-radius: 2px; background: var(--line); overflow: hidden; }
-    .countbar i { display: block; height: 100%; background: #c9c1b2; transform-origin: left; transition: transform .95s linear; }
-
-    .victory { text-align: center; padding: 6px 0 4px; }
+    .victory { text-align: center; padding: 8px 0 4px; }
     .victory .h { font-size: 21px; font-weight: 700; letter-spacing: .1em; color: var(--ok); }
     .victory .s { margin-top: 6px; font-size: 13px; color: var(--muted); }
 
@@ -271,6 +260,13 @@
     .feed { display: flex; flex-direction: column; gap: 10px; }
     .feed .card { padding: 13px 16px; }
     .feed .round-head { margin-bottom: 6px; }
+    .feed .card.fresh { animation: rise .3s ease-out; }
+
+    @keyframes rise {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: none; }
+    }
+
     .entries { display: flex; flex-wrap: wrap; gap: 4px 18px; }
     .entries .e { font-size: 15px; }
     .entries .e b { margin-right: 7px; font-size: 12px; font-weight: 500; color: var(--muted); }
@@ -362,17 +358,8 @@
                 <span id="pendingText">已提交</span>
             </div>
 
-            <div id="revealBody" hidden>
-                <ul class="words big" id="currentWords"></ul>
-                <div class="verdict">
-                    <span class="txt" id="verdictText">还不一致</span>
-                    <button id="nextBtn" class="btn ghost small">下一轮</button>
-                </div>
-                <div class="countbar"><i id="countbar"></i></div>
-            </div>
-
             <div id="doneBody" hidden>
-                <ul class="words big" id="doneWords"></ul>
+                <ul class="words" id="doneWords"></ul>
                 <div class="victory">
                     <div class="h">全员一致</div>
                     <div class="s" id="victorySub"></div>
@@ -416,11 +403,11 @@
 
     var BROKERS = ['wss://broker-cn.emqx.io:8084/mqtt', 'wss://broker.emqx.io:8084/mqtt'];
     var TOPIC = 'whim/wg/v1/';
-    var AUTO_NEXT_MS = 8000;
     var HOST_SILENT_MS = 18000;
     var HELLO_RETRY_MS = 2500;
     var PING_MS = 6000;
     var HOST_TICK_MS = 5000;
+    var SUBMIT_TIMEOUT_MS = 3000;
 
     var me = { id: '', name: '' };
     var room = '';
@@ -430,9 +417,12 @@
     var brokerIdx = 0;
     var lastHeard = 0;
     var helloCount = 0;
-    var submitting = false;
+    var pendingWord = null;
+    var pendingRound = 0;
+    var pendingAt = 0;
+    var lastFeedRound = 0;
     var triedFallback = false;
-    var timers = { hello: null, ping: null, host: null, autoNext: null, submit: null, tick: null };
+    var timers = { hello: null, ping: null, host: null, submit: null, tick: null };
 
     // ---------- 基础 ----------
 
@@ -530,7 +520,6 @@
         $('name').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('create').click(); });
 
         $('compose').addEventListener('submit', function (e) { e.preventDefault(); submitWord(); });
-        $('nextBtn').onclick = function () { if (isHost) advance(); else publish({ t: 'next', id: me.id }); };
         $('againBtn').onclick = function () { if (isHost) restartGame(); else publish({ t: 'restart', id: me.id }); };
         $('roomChip').onclick = copyInvite;
         $('roomChip2').onclick = copyInvite;
@@ -551,6 +540,8 @@
         var typed = ($('name').value || '').trim();
         me.name = (typed || ('玩家' + randCode(2))).slice(0, 8);
         saveName(me.name);
+        pendingWord = null;
+        lastFeedRound = 0;
 
         history.replaceState(null, '', location.pathname + '?r=' + room);
 
@@ -636,21 +627,23 @@
         if (isHost && !wasHost) startHostLoop();
         if (!isHost && wasHost) stopHostLoop();
         if (!R.find(s, me.id)) hello();
-        if (submitting && R.find(s, me.id) && R.find(s, me.id).wordRound === s.round) {
-            submitting = false;
-            clearTimeout(timers.submit);
+
+        // 自己的提交已经被房主确认（或本轮已经过去），清掉本地待确认状态
+        if (pendingWord) {
+            var mine = R.find(s, me.id);
+            if (!mine || mine.wordRound === s.round || s.round !== pendingRound) {
+                pendingWord = null;
+                clearTimeout(timers.submit);
+            }
         }
+
         render();
-        scheduleAutoNext();
     }
 
     function hostApply(msg) {
         var r = R.hostHandle(st, msg, Date.now());
         r.out.forEach(function (m) { publish(m, false); });
-        if (r.changed) {
-            publishState();
-            scheduleAutoNext();
-        }
+        if (r.changed) publishState();
     }
 
     function publishState() {
@@ -697,21 +690,6 @@
         timers.host = null;
     }
 
-    function scheduleAutoNext() {
-        clearTimeout(timers.autoNext);
-        if (!isHost || !st || st.phase !== 'revealed') return;
-        var wait = Math.max(500, AUTO_NEXT_MS - (Date.now() - st.updatedAt));
-        timers.autoNext = setTimeout(function () {
-            if (isHost && st && st.phase === 'revealed') advance();
-        }, wait);
-    }
-
-    function advance() {
-        if (!isHost || !st) return;
-        var r = R.hostHandle(st, { t: 'next', id: me.id }, Date.now());
-        if (r.changed) publishState();
-    }
-
     function restartGame() {
         if (!isHost || !st) return;
         var r = R.hostHandle(st, { t: 'restart', id: me.id }, Date.now());
@@ -727,8 +705,6 @@
         st.updatedAt = Date.now();
         publishState();
         startHostLoop();
-        scheduleAutoNext();
-        render();
     }
 
     // ---------- 提交 ----------
@@ -737,28 +713,33 @@
         var el = $('word');
         var w = (el.value || '').replace(/\s+/g, ' ').trim().slice(0, R.MAX_WORD);
         if (!w || !st || st.phase !== 'playing') return;
+        if (pendingWord) return;
+
         var mine = R.find(st, me.id);
         if (!mine) { hello(); return; }
         if (mine.wordRound === st.round) return;
 
+        el.value = '';
+
         if (isHost) {
             var r = R.hostHandle(st, { t: 'submit', id: me.id, word: w }, Date.now());
-            el.value = '';
-            if (r.changed) { publishState(); scheduleAutoNext(); }
+            if (r.changed) publishState();
             return;
         }
 
-        submitting = true;
-        publish({ t: 'submit', id: me.id, word: w }, false);
-        el.value = '';
+        pendingWord = w;
+        pendingRound = st.round;
+        pendingAt = Date.now();
         render();
+        publish({ t: 'submit', id: me.id, word: w }, false);
+
         clearTimeout(timers.submit);
         timers.submit = setTimeout(function () {
-            if (!submitting) return;
-            submitting = false;
-            setNet('提交超时', 'off');
+            if (!pendingWord) return;
+            pendingWord = null;
+            toast('没提交上，再试一次');
             render();
-        }, 6000);
+        }, SUBMIT_TIMEOUT_MS);
     }
 
     // ---------- 渲染 ----------
@@ -771,12 +752,11 @@
         renderPlayers();
         renderCurrent();
         renderFeed();
-        updateCountdown();
     }
 
     function renderPlayers() {
         var wrap = $('players');
-        var done = document.createDocumentFragment();
+        var frag = document.createDocumentFragment();
         st.players.forEach(function (p) {
             var el = document.createElement('div');
             el.className = 'player' + (p.id === me.id ? ' me' : '');
@@ -787,7 +767,7 @@
 
             var dot = document.createElement('i');
             dot.className = 'pdot';
-            if (Date.now() - p.lastSeen > 20000) dot.className += ' off';
+            if (st.phase !== 'done' && Date.now() - p.lastSeen > 20000) dot.className += ' off';
             else if (submitted(p)) dot.className += ' ok';
 
             var nm = document.createElement('span');
@@ -797,14 +777,14 @@
             av.appendChild(dot);
             el.appendChild(av);
             el.appendChild(nm);
-            done.appendChild(el);
+            frag.appendChild(el);
         });
         wrap.innerHTML = '';
-        wrap.appendChild(done);
+        wrap.appendChild(frag);
     }
 
     function setBody(id) {
-        ['waitingBody', 'composeBody', 'pendingBody', 'revealBody', 'doneBody'].forEach(function (k) {
+        ['waitingBody', 'composeBody', 'pendingBody', 'doneBody'].forEach(function (k) {
             $(k).hidden = k !== id;
         });
     }
@@ -833,43 +813,32 @@
         var total = st.players.length;
         var got = st.players.filter(submitted).length;
         var mine = R.find(st, me.id);
-        var rec = R.lastRecord(st);
 
         if (st.phase === 'waiting') {
-            $('roomCode2').textContent = room;
             tag.textContent = total + ' 人';
+            $('roomCode2').textContent = room;
             setBody('waitingBody');
             return;
         }
 
         if (st.phase === 'playing') {
             tag.textContent = got + '/' + total;
-            if (mine && submitted(mine)) {
+            var confirmed = !!(mine && submitted(mine));
+            if (confirmed || pendingWord) {
+                $('pendingText').textContent = '已提交，等待其他人';
                 setBody('pendingBody');
-                var waiting = st.players.filter(function (p) { return !submitted(p); })
-                    .map(function (p) { return p.name; });
-                $('pendingText').textContent = waiting.length ? '等 ' + waiting.join('、') : '等待中';
             } else {
                 setBody('composeBody');
-                if (submitting) { $('pendingText').textContent = '提交中'; setBody('pendingBody'); }
             }
             return;
         }
 
-        if (st.phase === 'revealed' && rec) {
-            tag.textContent = '不一致';
-            tag.className = 'tag bad';
-            fillWords($('currentWords'), rec.entries);
-            $('verdictText').textContent = got + '/' + total + ' 已提交';
-            setBody('revealBody');
-            return;
-        }
-
-        if (st.phase === 'done' && rec) {
+        var rec = R.lastRecord(st);
+        if (rec) {
             tag.textContent = '一致';
             tag.className = 'tag ok';
             fillWords($('doneWords'), rec.entries);
-            $('victorySub').textContent = '第 ' + st.round + ' 轮 · ' + rec.entries.length + ' 人写下同一个词';
+            $('victorySub').textContent = '第 ' + st.round + ' 轮 · ' + rec.entries.length + ' 人想到了一起';
             setBody('doneBody');
         }
     }
@@ -877,7 +846,11 @@
     function renderFeed() {
         var feed = $('feed');
         feed.innerHTML = '';
-        for (var r = st.round - 1; r >= 1; r--) {
+
+        var newest = st.round - 1;
+        var animate = newest > lastFeedRound;
+
+        for (var r = newest; r >= 1; r--) {
             var rec = null;
             for (var i = 0; i < st.history.length; i++) {
                 if (st.history[i].round === r) { rec = st.history[i]; break; }
@@ -885,7 +858,7 @@
             if (!rec) continue;
 
             var card = document.createElement('article');
-            card.className = 'card';
+            card.className = 'card' + (animate && r === newest ? ' fresh' : '');
 
             var head = document.createElement('div');
             head.className = 'round-head';
@@ -893,7 +866,7 @@
             t.className = 't';
             t.textContent = '第 ' + r + ' 轮';
             var tag = document.createElement('span');
-            tag.className = 'tag ' + (rec.unanimous ? 'ok' : 'bad');
+            tag.className = 'tag ' + (rec.unanimous ? 'ok' : '');
             tag.textContent = rec.unanimous ? '一致' : '不一致';
             head.appendChild(t);
             head.appendChild(tag);
@@ -914,29 +887,21 @@
             card.appendChild(entries);
             feed.appendChild(card);
         }
-    }
 
-    function updateCountdown() {
-        var bar = $('countbar');
-        if (!st || st.phase !== 'revealed') { bar.style.transform = 'scaleX(0)'; return; }
-        var left = AUTO_NEXT_MS - (Date.now() - st.updatedAt);
-        var ratio = Math.max(0, Math.min(1, left / AUTO_NEXT_MS));
-        bar.style.transform = 'scaleX(' + ratio + ')';
+        lastFeedRound = newest;
     }
 
     function tickUi() {
         if (!st) return;
-        updateCountdown();
+
+        if (pendingWord && Date.now() - pendingAt > SUBMIT_TIMEOUT_MS) {
+            pendingWord = null;
+            toast('没提交上，再试一次');
+            render();
+        }
+
         var silent = !isHost && Date.now() - lastHeard > HOST_SILENT_MS;
         $('takeoverBtn').hidden = !silent;
-        if (st.phase === 'playing' && !isHost) {
-            var mine = R.find(st, me.id);
-            if (mine && submitted(mine)) {
-                var waiting = st.players.filter(function (p) { return !submitted(p); })
-                    .map(function (p) { return p.name; });
-                $('pendingText').textContent = waiting.length ? '等 ' + waiting.join('、') : '等待中';
-            }
-        }
     }
 
     // ---------- 邀请 / 退出 ----------
@@ -964,11 +929,10 @@
         clearInterval(timers.hello);
         clearInterval(timers.ping);
         clearInterval(timers.host);
-        clearTimeout(timers.autoNext);
         clearTimeout(timers.submit);
         st = null;
         isHost = false;
-        submitting = false;
+        pendingWord = null;
         $('game').hidden = true;
         $('lobby').hidden = false;
         $('name').value = savedName();

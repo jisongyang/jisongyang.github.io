@@ -55,7 +55,7 @@
       createdAt: t,
       updatedAt: t,
       round: 1,
-      phase: 'waiting',   // waiting | playing | revealed | done
+      phase: 'waiting',   // waiting | playing | done
       maxPlayers: MAX_PLAYERS,
       players: [{
         id: hostId,
@@ -119,7 +119,7 @@
       }
       return true;
     });
-    if (removed.length && state.phase === 'playing') maybeReveal(state, t);
+    if (removed.length && state.phase === 'playing') maybeComplete(state, t);
     return removed;
   }
 
@@ -152,11 +152,12 @@
     p.word = w;
     p.wordRound = state.round;
     p.lastSeen = t;
-    maybeReveal(state, t);
+    maybeComplete(state, t);
     return { ok: true };
   }
 
-  function maybeReveal(state, t) {
+  // 全员提交即结算：一致就结束；不一致立即进入下一轮（不设倒计时，结果落在 history 里）
+  function maybeComplete(state, t) {
     if (state.phase !== 'playing') return false;
     if (!allSubmitted(state)) return false;
     var words = state.players.map(function (p) { return p.word; });
@@ -168,20 +169,15 @@
       }),
       unanimous: unanimous
     });
-    state.phase = unanimous ? 'done' : 'revealed';
+    if (unanimous) {
+      state.phase = 'done';
+    } else {
+      state.round += 1;
+      state.players.forEach(function (p) { p.word = null; p.wordRound = 0; });
+      state.phase = state.players.length >= MIN_PLAYERS ? 'playing' : 'waiting';
+    }
     state.updatedAt = t || Date.now();
     return true;
-  }
-
-  // 揭示之后进入下一轮（清空本轮的词）
-  function nextRound(state, t) {
-    t = t || Date.now();
-    if (state.phase !== 'revealed') return { ok: false, reason: 'phase' };
-    state.round += 1;
-    state.players.forEach(function (p) { p.word = null; p.wordRound = 0; });
-    state.phase = state.players.length >= MIN_PLAYERS ? 'playing' : 'waiting';
-    state.updatedAt = t;
-    return { ok: true };
   }
 
   // 重开：保留在场玩家，清空历史
@@ -212,6 +208,7 @@
       state.seq += 1;
       state.updatedAt = t;
     }
+    if (state.phase === 'playing') maybeComplete(state, t);
     if (removed.length) state.updatedAt = t;
     return removed;
   }
@@ -252,8 +249,7 @@
         if (submitWord(state, msg.id, msg.word, t).ok) changed = true;
         break;
       case 'next':
-        touch(state, msg.id, t);
-        if (nextRound(state, t).ok) changed = true;
+        // 老页面可能还发这个；现在没有"揭示"阶段，直接忽略
         break;
       case 'restart':
         touch(state, msg.id, t);
@@ -301,8 +297,7 @@
     submitWord: submitWord,
     submitCount: submitCount,
     allSubmitted: allSubmitted,
-    maybeReveal: maybeReveal,
-    nextRound: nextRound,
+    maybeComplete: maybeComplete,
     restart: restart,
     refresh: refresh,
     lastRecord: lastRecord,
