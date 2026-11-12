@@ -758,6 +758,14 @@
 
     function submitted(p) { return p.wordRound === st.round && !!p.word; }
 
+    // 北斗星名取第二个字（枢/璇/玑/权/衡/阳/光），否则取首字
+    function avatarChar(name) {
+        if (!name) return '?';
+        var chars = Array.from(name);
+        if (R.STARS.indexOf(name) >= 0 && chars.length > 1) return chars[1].toUpperCase();
+        return chars[0].toUpperCase();
+    }
+
     function render() {
         if (!st) return;
         $('roomCode').textContent = room;
@@ -775,7 +783,7 @@
 
             var av = document.createElement('div');
             av.className = 'avatar';
-            av.textContent = p.name.slice(0, 1).toUpperCase();
+            av.textContent = avatarChar(p.name);
 
             var dot = document.createElement('i');
             dot.className = 'pdot';
