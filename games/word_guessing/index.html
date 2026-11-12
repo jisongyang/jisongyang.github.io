@@ -298,6 +298,10 @@
     .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
     .boot { margin: 80px 0; text-align: center; color: var(--bad); font-size: 14px; }
+
+    /* 显隐统一规则，放在最后：作者样式里的 display:flex 会盖掉浏览器给 [hidden] 的 display:none */
+    [hidden] { display: none !important; }
+    .hide { display: none !important; }
 </style>
 </head>
 <body>
@@ -395,9 +399,9 @@
         var miss = [];
         if (!window.mqtt) miss.push('mqtt.min.js');
         if (!R) miss.push('room.js');
-        $('boot').hidden = false;
+        show('boot', true);
         $('boot').textContent = '加载失败：' + miss.join('、') + '，请刷新重试';
-        $('lobby').hidden = true;
+        show('lobby', false);
         return;
     }
 
@@ -459,6 +463,13 @@
         $('netText').textContent = text;
     }
 
+    // 显隐统一入口：hidden 属性管首帧，.hide 类管运行期（!important，不会被 display:flex 盖掉）
+    function show(el, on) {
+        if (typeof el === 'string') el = $(el);
+        el.hidden = !on;
+        el.classList.toggle('hide', !on);
+    }
+
     function publish(msg, retain) {
         if (!client || !client.connected) return false;
         msg.room = room;
@@ -489,7 +500,7 @@
         if (qr) {
             room = qr;
             $('code').value = qr;
-            $('joinBox').hidden = false;
+            show('joinBox', true);
             if (me.name) { startSession(false); return; }
             showLobbyMsg('加入房间 ' + qr);
         }
@@ -498,7 +509,7 @@
     function showLobbyMsg(text) {
         var el = $('lobbyMsg');
         el.textContent = text;
-        el.hidden = !text;
+        show(el, !!text);
     }
 
     function bind() {
@@ -507,8 +518,9 @@
             startSession(true);
         };
         $('joinToggle').onclick = function () {
-            $('joinBox').hidden = !$('joinBox').hidden;
-            if (!$('joinBox').hidden) $('code').focus();
+            var open = $('joinBox').hidden;
+            show('joinBox', open);
+            if (open) $('code').focus();
         };
         $('joinGo').onclick = function () {
             var code = ($('code').value || '').toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 6);
@@ -545,8 +557,8 @@
 
         history.replaceState(null, '', location.pathname + '?r=' + room);
 
-        $('lobby').hidden = true;
-        $('game').hidden = false;
+        show('lobby', false);
+        show('game', true);
 
         if (isHost) {
             st = R.createState(room, me.id, me.name);
@@ -785,7 +797,7 @@
 
     function setBody(id) {
         ['waitingBody', 'composeBody', 'pendingBody', 'doneBody'].forEach(function (k) {
-            $(k).hidden = k !== id;
+            show(k, k === id);
         });
     }
 
@@ -901,7 +913,7 @@
         }
 
         var silent = !isHost && Date.now() - lastHeard > HOST_SILENT_MS;
-        $('takeoverBtn').hidden = !silent;
+        show('takeoverBtn', silent);
     }
 
     // ---------- 邀请 / 退出 ----------
@@ -933,8 +945,8 @@
         st = null;
         isHost = false;
         pendingWord = null;
-        $('game').hidden = true;
-        $('lobby').hidden = false;
+        show('game', false);
+        show('lobby', true);
         $('name').value = savedName();
         history.replaceState(null, '', location.pathname);
     }
