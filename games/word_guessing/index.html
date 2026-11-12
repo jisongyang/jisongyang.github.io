@@ -252,7 +252,7 @@
     <div id="toast" class="toast" hidden></div>
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.4/dist/mqtt.min.js"></script>
+<script src="mqtt.min.js"></script>
 <script src="room.js"></script>
 <script>
 (function () {
@@ -262,8 +262,11 @@
     var R = window.WGRoom;
 
     if (!window.mqtt || !R) {
+        var miss = [];
+        if (!window.mqtt) miss.push('通信库 mqtt.min.js');
+        if (!R) miss.push('逻辑文件 room.js');
         $('boot').hidden = false;
-        $('boot').textContent = '通信库加载失败，请检查网络后刷新页面。';
+        $('boot').textContent = '加载失败：' + miss.join('、') + '。请刷新页面重试。';
         $('lobby').hidden = true;
         return;
     }
