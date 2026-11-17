@@ -308,6 +308,31 @@
         color: var(--muted);
     }
 
+    /* ---------- 总结图 ---------- */
+
+    .share {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: calc(20px + env(safe-area-inset-top)) 14px calc(20px + env(safe-area-inset-bottom));
+        background: rgba(20, 18, 15, .74);
+        overflow: auto;
+    }
+    .share-box { width: 100%; max-width: 520px; }
+    .share-box img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 14px;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, .45);
+    }
+    .share-hint { margin: 14px 0 12px; text-align: center; font-size: 13px; color: #f1ece2; }
+    .share-btns { display: flex; gap: 10px; }
+    .share-btns .btn { flex: 1; }
+
     /* ---------- 底部 ---------- */
 
     .foot { display: flex; align-items: center; gap: 16px; padding: 2px 2px 8px; }
@@ -406,6 +431,7 @@
                     <div class="s" id="victorySub"></div>
                 </div>
                 <button id="againBtn" class="btn primary wide" style="margin-top:16px">再来一局</button>
+                <button id="summaryBtn" class="btn ghost wide" style="margin-top:10px" hidden>生成总结图</button>
             </div>
         </article>
 
@@ -420,6 +446,17 @@
 
     <div id="boot" class="boot" hidden></div>
 </main>
+
+<div id="share" class="share" hidden>
+    <div class="share-box">
+        <img id="shareImg" alt="对局总结图">
+        <p class="share-hint">长按图片保存到相册</p>
+        <div class="share-btns">
+            <button id="shareSave" class="btn ghost">下载</button>
+            <button id="shareClose" class="btn primary">关闭</button>
+        </div>
+    </div>
+</div>
 
 <div id="toast" class="toast"></div>
 
@@ -570,6 +607,29 @@
 
         $('compose').addEventListener('submit', function (e) { e.preventDefault(); submitWord(); });
         $('againBtn').onclick = function () { if (isHost) restartGame(); else publish({ t: 'restart', id: me.id }); };
+        $('summaryBtn').onclick = function () {
+            if (SIM.state !== 'ready') {
+                if (SIM.state === 'idle') loadSim();
+                toast('词表还在加载，稍等一下');
+                return;
+            }
+            var url = buildSummary();
+            if (!url) { toast('生成失败'); return; }
+            $('shareImg').src = url;
+            show('share', true);
+        };
+        $('shareClose').onclick = function () { show('share', false); };
+        $('shareSave').onclick = function () {
+            var a = document.createElement('a');
+            a.href = $('shareImg').src;
+            a.download = '猜词-' + room + '.png';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        };
+        $('share').addEventListener('click', function (e) {
+            if (e.target === $('share')) show('share', false);
+        });
         $('roomChip').onclick = copyInvite;
         $('roomChip2').onclick = copyInvite;
         $('exitBtn').onclick = exit;
@@ -961,6 +1021,227 @@
         return wrap;
     }
 
+    // ---------- 对局总结图 ----------
+
+    var FONT = '-apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+
+    function today() {
+        var d = new Date();
+        var m = d.getMonth() + 1, day = d.getDate();
+        return d.getFullYear() + '.' + (m < 10 ? '0' : '') + m + '.' + (day < 10 ? '0' : '') + day;
+    }
+
+    // 我的「上一轮 -> 这一轮」
+    function selfSeries() {
+        var mine = [];
+        st.history.forEach(function (rec) {
+            for (var i = 0; i < rec.entries.length; i++) {
+                if (rec.entries[i].id === me.id) {
+                    mine.push({ round: rec.round, word: rec.entries[i].word });
+                    break;
+                }
+            }
+        });
+        var out = [];
+        for (var i = 1; i < mine.length; i++) {
+            var v = pairSim({ word: mine[i - 1].word }, { word: mine[i].word });
+            if (v === null) return out;
+            out.push({ round: mine[i].round, a: mine[i - 1].word, b: mine[i].word, v: v });
+        }
+        return out;
+    }
+
+    // 每一轮全员两两的平均
+    function avgSeries() {
+        var out = [];
+        st.history.forEach(function (rec) {
+            if (rec.entries.length < 2) return;
+            var total = 0, n = 0;
+            for (var i = 0; i < rec.entries.length; i++) {
+                for (var j = i + 1; j < rec.entries.length; j++) {
+                    var v = pairSim(rec.entries[i], rec.entries[j]);
+                    if (v === null) return;
+                    total += v;
+                    n++;
+                }
+            }
+            out.push({ round: rec.round, v: Math.round(total / n) });
+        });
+        return out;
+    }
+
+    function rrPath(g, x, y, w, h, r) {
+        if (g.roundRect) {
+            g.beginPath();
+            g.roundRect(x, y, w, h, r);
+            return;
+        }
+        g.beginPath();
+        g.moveTo(x + r, y);
+        g.arcTo(x + w, y, x + w, y + h, r);
+        g.arcTo(x + w, y + h, x, y + h, r);
+        g.arcTo(x, y + h, x, y, r);
+        g.arcTo(x, y, x + w, y, r);
+        g.closePath();
+    }
+
+    function fitText(g, s, maxW) {
+        if (g.measureText(s).width <= maxW) return s;
+        var out = s;
+        while (out.length > 1 && g.measureText(out + '…').width > maxW) out = out.slice(0, -1);
+        return out + '…';
+    }
+
+    function drawChart(g, box, pts, opt) {
+        var card = '#fffdf9', gold = '#b98329', ink = '#211f1a', muted = '#8d8880';
+        var n = pts.length;
+
+        if (!n) {
+            g.fillStyle = '#b3ada3';
+            g.font = '26px ' + FONT;
+            g.textAlign = 'center';
+            g.textBaseline = 'middle';
+            g.fillText('还不够两轮', box.x + box.w / 2, box.y + box.h / 2);
+            return;
+        }
+
+        var padX = n === 1 ? 0 : 40;
+        var xs = [];
+        for (var i = 0; i < n; i++) {
+            xs.push(n === 1 ? box.x + box.w / 2 : box.x + padX + (box.w - padX * 2) * i / (n - 1));
+        }
+        function yOf(v) { return box.y + box.h - (v / 100) * box.h; }
+
+        var spacing = n > 1 ? xs[1] - xs[0] : box.w;
+        var labelFont = Math.max(15, Math.min(23, spacing / 7));
+        var valueFont = Math.max(20, Math.min(30, spacing / 3));
+
+        [0, 25, 50, 75, 100].forEach(function (v) {
+            var y = yOf(v);
+            g.strokeStyle = '#efeae0';
+            g.lineWidth = 2;
+            g.beginPath();
+            g.moveTo(box.x, y);
+            g.lineTo(box.x + box.w, y);
+            g.stroke();
+            g.fillStyle = '#b3ada3';
+            g.font = '22px ' + FONT;
+            g.textAlign = 'right';
+            g.textBaseline = 'middle';
+            g.fillText(String(v), box.x - 16, y);
+        });
+
+        g.strokeStyle = gold;
+        g.lineWidth = 5;
+        g.lineJoin = 'round';
+        g.lineCap = 'round';
+        g.beginPath();
+        for (i = 0; i < n; i++) {
+            if (i === 0) g.moveTo(xs[i], yOf(pts[i].v));
+            else g.lineTo(xs[i], yOf(pts[i].v));
+        }
+        g.stroke();
+
+        for (i = 0; i < n; i++) {
+            var x = xs[i], y = yOf(pts[i].v);
+            g.beginPath();
+            g.arc(x, y, 10, 0, Math.PI * 2);
+            g.fillStyle = card;
+            g.fill();
+            g.lineWidth = 5;
+            g.strokeStyle = gold;
+            g.stroke();
+
+            g.fillStyle = ink;
+            g.font = 'bold ' + valueFont + 'px ' + FONT;
+            g.textAlign = 'center';
+            if (pts[i].v > 86) {
+                g.textBaseline = 'top';
+                g.fillText(pts[i].v + '%', x, y + 20);
+            } else {
+                g.textBaseline = 'bottom';
+                g.fillText(pts[i].v + '%', x, y - 20);
+            }
+        }
+
+        if (opt.labels) {
+            for (i = 0; i < n; i++) {
+                g.fillStyle = muted;
+                g.font = labelFont + 'px ' + FONT;
+                g.textAlign = 'center';
+                g.textBaseline = 'top';
+                g.fillText(fitText(g, pts[i].a + ' → ' + pts[i].b, spacing - 10), xs[i], box.y + box.h + 26);
+            }
+        }
+        for (i = 0; i < n; i++) {
+            g.fillStyle = '#b3ada3';
+            g.font = '20px ' + FONT;
+            g.textAlign = 'center';
+            g.textBaseline = 'top';
+            g.fillText('第 ' + pts[i].round + ' 轮', xs[i], box.y + box.h + (opt.labels ? 62 : 26));
+        }
+    }
+
+    function buildSummary() {
+        var W = 1080, H = 1680;
+        var cv = document.createElement('canvas');
+        cv.width = W;
+        cv.height = H;
+        var g = cv.getContext('2d');
+        if (!g) return null;
+
+        var ink = '#211f1a', muted = '#8d8880', line = '#e7e2d8', card = '#fffdf9', paper = '#f7f4ee';
+
+        g.fillStyle = paper;
+        g.fillRect(0, 0, W, H);
+
+        g.textAlign = 'left';
+        g.textBaseline = 'alphabetic';
+        g.fillStyle = muted;
+        g.font = '28px ' + FONT;
+        g.fillText('猜词', 88, 108);
+
+        g.fillStyle = ink;
+        g.font = 'bold 58px ' + FONT;
+        g.fillText('第 ' + st.round + ' 轮 · 全员一致', 88, 188);
+
+        g.fillStyle = muted;
+        g.font = '24px ' + FONT;
+        g.fillText(today() + ' · 房间 ' + room + ' · ' + st.players.length + ' 人', 88, 234);
+
+        function panel(y, h, title) {
+            rrPath(g, 48, y, W - 96, h, 28);
+            g.fillStyle = card;
+            g.fill();
+            g.strokeStyle = line;
+            g.lineWidth = 2;
+            g.stroke();
+            g.fillStyle = ink;
+            g.font = 'bold 34px ' + FONT;
+            g.textAlign = 'left';
+            g.textBaseline = 'alphabetic';
+            g.fillText(title, 88, y + 66);
+        }
+
+        panel(280, 620, '我的上一轮 → 这一轮');
+        drawChart(g, { x: 150, y: 380, w: 842, h: 340 }, selfSeries(), { labels: true });
+
+        panel(940, 560, '每轮全员平均');
+        drawChart(g, { x: 150, y: 1040, w: 842, h: 340 }, avgSeries(), { labels: false });
+
+        g.fillStyle = '#b3ada3';
+        g.font = '22px ' + FONT;
+        g.textAlign = 'center';
+        g.textBaseline = 'alphabetic';
+        g.fillText('word-guessing · ' + today(), W / 2, 1600);
+
+        try {
+            return cv.toDataURL('image/png');
+        } catch (e) {
+            return null;
+        }
+    }
+
     // 北斗星名取第二个字（枢/璇/玑/权/衡/阳/光），否则取首字
     function avatarChar(name) {
         if (!name) return '?';
@@ -975,6 +1256,7 @@
         renderPlayers();
         renderCurrent();
         renderFeed();
+        if (st.phase !== 'done') show('share', false);
     }
 
     function renderPlayers() {
@@ -1062,6 +1344,7 @@
             tag.className = 'tag ok';
             fillWords($('doneWords'), rec.entries);
             $('victorySub').textContent = '第 ' + st.round + ' 轮 · ' + rec.entries.length + ' 人想到了一起';
+            show('summaryBtn', st.history.length >= 2);
             setBody('doneBody');
         }
     }
