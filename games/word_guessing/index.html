@@ -283,7 +283,19 @@
     .matrix { margin-top: 10px; }
     .matrix-cap { font-size: 11px; color: var(--faint); margin-bottom: 6px; }
     .matrix-grid { display: grid; gap: 3px; }
-    .mx-head { display: flex; align-items: center; justify-content: center; height: 26px; font-size: 11px; color: var(--muted); }
+    .mx-head {
+        display: block;
+        height: 26px;
+        line-height: 26px;
+        text-align: center;
+        font-size: 11px;
+        color: var(--muted);
+        min-width: 0;
+        padding: 0 3px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
     .mx-cell {
         display: flex;
         align-items: center;
@@ -924,13 +936,19 @@
 
         var grid = document.createElement('div');
         grid.className = 'matrix-grid';
-        grid.style.gridTemplateColumns = '34px repeat(' + prev.entries.length + ', minmax(0, 1fr))';
+        grid.style.gridTemplateColumns = '46px repeat(' + prev.entries.length + ', minmax(0, 1fr))';
 
         grid.appendChild(mxEl('mx-head', ''));
-        prev.entries.forEach(function (e) { grid.appendChild(mxEl('mx-head', avatarChar(e.name))); });
+        prev.entries.forEach(function (e) {
+            var h = mxEl('mx-head', e.word);
+            h.title = e.name + '：' + e.word;
+            grid.appendChild(h);
+        });
 
         cur.entries.forEach(function (row) {
-            grid.appendChild(mxEl('mx-head', avatarChar(row.name)));
+            var rh = mxEl('mx-head', row.word);
+            rh.title = row.name + '：' + row.word;
+            grid.appendChild(rh);
             prev.entries.forEach(function (col) {
                 var v = pairSim(row, col);
                 var cell = mxEl('mx-cell', v === null ? '…' : String(v));
