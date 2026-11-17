@@ -929,11 +929,6 @@
         var wrap = document.createElement('div');
         wrap.className = 'matrix';
 
-        var cap = document.createElement('div');
-        cap.className = 'matrix-cap';
-        cap.textContent = '本轮 × 第 ' + prev.round + ' 轮（行=本轮，列=上轮）';
-        wrap.appendChild(cap);
-
         var grid = document.createElement('div');
         grid.className = 'matrix-grid';
         grid.style.gridTemplateColumns = '46px repeat(' + prev.entries.length + ', minmax(0, 1fr))';
