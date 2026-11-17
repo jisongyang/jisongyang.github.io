@@ -276,6 +276,26 @@
     .sim-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: #b98329; transition: width .4s ease; }
     .sim-txt { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
+    .round-right { display: flex; align-items: center; gap: 8px; }
+    .detail-btn { border: 0; background: none; padding: 2px 0; font: inherit; font-size: 11px; color: var(--muted); cursor: pointer; }
+    .detail-btn:active { opacity: .6; }
+
+    .matrix { margin-top: 10px; }
+    .matrix-cap { font-size: 11px; color: var(--faint); margin-bottom: 6px; }
+    .matrix-grid { display: grid; gap: 3px; }
+    .mx-head { display: flex; align-items: center; justify-content: center; height: 26px; font-size: 11px; color: var(--muted); }
+    .mx-cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 32px;
+        border-radius: 7px;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        background: var(--soft);
+        color: var(--muted);
+    }
+
     /* ---------- 底部 ---------- */
 
     .foot { display: flex; align-items: center; gap: 16px; padding: 2px 2px 8px; }
@@ -862,6 +882,72 @@
         return el;
     }
 
+    // ---------- 本轮 × 上一轮 的详细矩阵 ----------
+
+    var expanded = {};
+
+    // 低分冷灰 -> 中分沙色 -> 高分赭金
+    var HEAT = [[238, 241, 245], [236, 214, 178], [176, 116, 44]];
+
+    function heat(v) {
+        var t = Math.max(0, Math.min(1, v / 100));
+        var a = t < 0.5 ? HEAT[0] : HEAT[1];
+        var b = t < 0.5 ? HEAT[1] : HEAT[2];
+        var k = t < 0.5 ? t / 0.5 : (t - 0.5) / 0.5;
+        var rgb = a.map(function (x, i) { return Math.round(x + (b[i] - x) * k); });
+        var lum = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+        return { bg: 'rgb(' + rgb.join(',') + ')', fg: lum < 0.55 ? '#fff' : '#211f1a' };
+    }
+
+    function mxEl(cls, text) {
+        var el = document.createElement('span');
+        el.className = cls;
+        el.textContent = text;
+        return el;
+    }
+
+    function recOf(round) {
+        for (var i = 0; i < st.history.length; i++) {
+            if (st.history[i].round === round) return st.history[i];
+        }
+        return null;
+    }
+
+    function buildMatrix(cur, prev) {
+        var wrap = document.createElement('div');
+        wrap.className = 'matrix';
+
+        var cap = document.createElement('div');
+        cap.className = 'matrix-cap';
+        cap.textContent = '本轮 × 第 ' + prev.round + ' 轮（行=本轮，列=上轮）';
+        wrap.appendChild(cap);
+
+        var grid = document.createElement('div');
+        grid.className = 'matrix-grid';
+        grid.style.gridTemplateColumns = '34px repeat(' + prev.entries.length + ', minmax(0, 1fr))';
+
+        grid.appendChild(mxEl('mx-head', ''));
+        prev.entries.forEach(function (e) { grid.appendChild(mxEl('mx-head', avatarChar(e.name))); });
+
+        cur.entries.forEach(function (row) {
+            grid.appendChild(mxEl('mx-head', avatarChar(row.name)));
+            prev.entries.forEach(function (col) {
+                var v = pairSim(row, col);
+                var cell = mxEl('mx-cell', v === null ? '…' : String(v));
+                if (v !== null) {
+                    var c = heat(v);
+                    cell.style.background = c.bg;
+                    cell.style.color = c.fg;
+                }
+                grid.appendChild(cell);
+            });
+        });
+
+        if (SIM.state !== 'ready' && SIM.state !== 'failed') loadSim();
+        wrap.appendChild(grid);
+        return wrap;
+    }
+
     // 北斗星名取第二个字（枢/璇/玑/权/衡/阳/光），否则取首字
     function avatarChar(name) {
         if (!name) return '?';
@@ -971,15 +1057,15 @@
         var feed = $('feed');
         feed.innerHTML = '';
 
+        if (!st.history.length) expanded = {};   // 重开一局时清掉展开状态
+
         var newest = st.round - 1;
         var animate = newest > lastFeedRound;
 
         for (var r = newest; r >= 1; r--) {
-            var rec = null;
-            for (var i = 0; i < st.history.length; i++) {
-                if (st.history[i].round === r) { rec = st.history[i]; break; }
-            }
+            var rec = recOf(r);
             if (!rec) continue;
+            var prev = recOf(r - 1);
 
             var card = document.createElement('article');
             card.className = 'card' + (animate && r === newest ? ' fresh' : '');
@@ -989,11 +1075,28 @@
             var t = document.createElement('span');
             t.className = 't';
             t.textContent = '第 ' + r + ' 轮';
+
+            var right = document.createElement('div');
+            right.className = 'round-right';
+
             var tag = document.createElement('span');
             tag.className = 'tag ' + (rec.unanimous ? 'ok' : '');
             tag.textContent = rec.unanimous ? '一致' : '不一致';
+            right.appendChild(tag);
+
+            if (prev) {
+                var btn = document.createElement('button');
+                btn.className = 'detail-btn';
+                btn.textContent = expanded[r] ? '收起' : '详细';
+                btn.setAttribute('aria-label', '第 ' + r + ' 轮与上一轮的相似度矩阵');
+                btn.addEventListener('click', (function (round) {
+                    return function () { expanded[round] = !expanded[round]; render(); };
+                })(r));
+                right.appendChild(btn);
+            }
+
             head.appendChild(t);
-            head.appendChild(tag);
+            head.appendChild(right);
 
             var entries = document.createElement('div');
             entries.className = 'entries';
@@ -1011,6 +1114,7 @@
             card.appendChild(entries);
             var sim = simRow(rec);
             if (sim) card.appendChild(sim);
+            if (prev && expanded[r]) card.appendChild(buildMatrix(rec, prev));
             feed.appendChild(card);
         }
 
