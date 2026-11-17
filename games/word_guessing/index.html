@@ -271,6 +271,11 @@
     .entries .e { font-size: 15px; }
     .entries .e b { margin-right: 7px; font-size: 12px; font-weight: 500; color: var(--muted); }
 
+    .sim { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+    .sim-bar { position: relative; flex: 1; height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
+    .sim-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: #b98329; transition: width .4s ease; }
+    .sim-txt { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
     /* ---------- 底部 ---------- */
 
     .foot { display: flex; align-items: center; gap: 16px; padding: 2px 2px 8px; }
@@ -758,6 +763,105 @@
 
     function submitted(p) { return p.wordRound === st.round && !!p.word; }
 
+    // ---------- 词语接近度（离线词向量表，首次用到时才加载） ----------
+
+    var SIM = { state: 'idle', words: null, q: null, dim: 0, scale: 1, index: null };
+
+    function loadSim() {
+        if (SIM.state !== 'idle') return;
+        SIM.state = 'loading';
+        if (typeof fetch !== 'function') { SIM.state = 'failed'; return; }
+        Promise.all([
+            fetch('words.txt').then(function (r) { return r.text(); }),
+            fetch('meta.json').then(function (r) { return r.json(); }),
+            fetch('vectors.bin').then(function (r) { return r.arrayBuffer(); })
+        ]).then(function (res) {
+            var words = res[0].split('\n');
+            SIM.words = words;
+            SIM.dim = res[1].dim;
+            SIM.scale = res[1].scale;
+            SIM.q = new Int8Array(res[2]);
+            var m = new Map();
+            for (var i = 0; i < words.length; i++) m.set(words[i], i);
+            SIM.index = m;
+            SIM.state = 'ready';
+            render();
+        }).catch(function () { SIM.state = 'failed'; });
+    }
+
+    // 余弦 -> 0-100：中间值 0.26、斜率 0.085，让随机词对落在 5% 左右
+    function mapCos(c) {
+        var p = 100 / (1 + Math.exp(-(c - 0.26) / 0.085));
+        return Math.max(1, Math.min(99, Math.round(p)));
+    }
+
+    // 词表外的词：只按字面重合给分，上限 60，避免和语义分混淆
+    function charSim(a, b) {
+        var A = Array.from(a), B = Array.from(b);
+        var set = {};
+        B.forEach(function (c) { set[c] = true; });
+        var inter = A.filter(function (c) { return set[c]; }).length;
+        if (!inter) return 0;
+        return Math.round((2 * inter / (A.length + B.length)) * 60);
+    }
+
+    function pairSim(a, b) {
+        if (a.word === b.word) return 100;
+        if (SIM.state !== 'ready') return null;
+        var i = SIM.index.get(a.word), j = SIM.index.get(b.word);
+        if (i === undefined || j === undefined) return charSim(a.word, b.word);
+        var d = SIM.dim, q = SIM.q, s = 0, na = 0, nb = 0;
+        for (var k = 0; k < d; k++) {
+            var x = q[i * d + k], y = q[j * d + k];
+            s += x * y; na += x * x; nb += y * y;
+        }
+        if (!na || !nb) return charSim(a.word, b.word);
+        return mapCos(s / Math.sqrt(na * nb));
+    }
+
+    // 返回 { avg, best, bestPair }；表格没就绪时返回 null
+    function roundSim(rec) {
+        var es = rec.entries;
+        if (es.length < 2 || SIM.state !== 'ready') return null;
+        var total = 0, n = 0, best = -1, bestPair = null;
+        for (var i = 0; i < es.length; i++) {
+            for (var j = i + 1; j < es.length; j++) {
+                var p = pairSim(es[i], es[j]);
+                if (p === null) return null;
+                total += p; n++;
+                if (p > best) { best = p; bestPair = [es[i], es[j]]; }
+            }
+        }
+        return { avg: Math.round(total / n), best: best, bestPair: bestPair, pairs: n };
+    }
+
+    function simRow(rec) {
+        var el = document.createElement('div');
+        el.className = 'sim';
+
+        var r = roundSim(rec);
+        if (!r) {
+            if (SIM.state !== 'failed') loadSim();
+            return null;
+        }
+
+        var bar = document.createElement('span');
+        bar.className = 'sim-bar';
+        var fill = document.createElement('i');
+        fill.style.width = r.avg + '%';
+        bar.appendChild(fill);
+
+        var txt = document.createElement('span');
+        txt.className = 'sim-txt';
+        txt.textContent = r.pairs === 1
+            ? '接近度 ' + r.avg + '%'
+            : '平均 ' + r.avg + '% · 最高 ' + r.best + '%';
+
+        el.appendChild(bar);
+        el.appendChild(txt);
+        return el;
+    }
+
     // 北斗星名取第二个字（枢/璇/玑/权/衡/阳/光），否则取首字
     function avatarChar(name) {
         if (!name) return '?';
@@ -905,6 +1009,8 @@
 
             card.appendChild(head);
             card.appendChild(entries);
+            var sim = simRow(rec);
+            if (sim) card.appendChild(sim);
             feed.appendChild(card);
         }
 
